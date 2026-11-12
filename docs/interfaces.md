@@ -217,10 +217,19 @@ Audit reference for KITTI drive `2011_09_30_drive_0016`: 2967 samples, `dt` 9.65
 
 PROPOSED mapping: `R_wb = Rz(yaw) Ry(pitch) Rx(roll)` with the dataset definitions
 (yaw 0 = east, counter-clockwise; pitch positive = front down; roll positive = left
-side up). The audit means are consistent with this mapping (`ay` = +0.4165 against
-g sin(roll) = 0.4175 m/s^2; sign of the pitch contribution to `ax`). The comparison of
-`yaw` with `atan2(vn, ve)` checks course over ground, not heading, and is not a
-verification. Full numerical verification: OPEN.
+side up).
+
+Numerical check on drive `2011_09_30_drive_0016`, all 2967 samples
+(`docs/data_manifest.md`):
+
+- VERIFIED: sign and axis of roll and pitch (residual 0.012 m/s^2 rms against 0.25
+  and 0.85 m/s^2 for the sign-flipped variants); sign of yaw (0.078 m/s rms against
+  27.9 m/s).
+- NOT OBSERVABLE on this drive: the order of the roll and pitch rotations.
+- OPEN: unexplained residuals of the levelled-frame comparison.
+
+The comparison of `yaw` with `atan2(vn, ve)` checks course over ground, not heading,
+and is not a verification.
 
 ## 12. Open decisions
 
@@ -234,5 +243,6 @@ verification. Full numerical verification: OPEN.
 | Value of `g_w` magnitude | PROPOSED 9.81 |
 | Noise densities and `P_0` | OPEN |
 | `dt_max` and gap handling in outage windows | OPEN |
-| Numerical verification of the reference orientation mapping | OPEN |
+| Order of roll and pitch rotations in the KITTI reference orientation | OPEN: not observable on the audited drive; to be confirmed from the dataset development kit and a drive with larger attitude angles |
+| Residuals of the levelled-frame check (0.012 m/s^2, 0.078 m/s rms) | OPEN |
 | Second KITTI drive with turns and stops | OPEN; does not block the freeze |
