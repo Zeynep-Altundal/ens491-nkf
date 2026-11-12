@@ -1,9 +1,17 @@
-# PyTorch and CUDA pins are added after the W01 compatibility test on all machines.
 name: nkf
 channels:
   - conda-forge
 dependencies:
   - python=3.11
+  - numpy
+  - scipy
+  - pandas
+  - matplotlib
+  - pyyaml
+  - hydra-core
+  - omegaconf
+  - pytest
+  - ruff
   - pip
   - pip:
-      - -e .[dev]
+      - wandb

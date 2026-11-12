@@ -1,0 +1,34 @@
+{
+  "machine": "melike",
+  "checked_utc": "2026-11-12T08:13:55Z",
+  "os": "Ubuntu 24.04.5 LTS",
+  "kernel": "5.15.167.4-microsoft-standard-WSL2",
+  "python": "3.11.18",
+  "ram_gb": 16.6,
+  "conda_env": "nkf",
+  "git_sha": "32eadaa4c5e3b4938eda78351366cae708d3c338",
+  "git_dirty": true,
+  "packages": {
+    "numpy": "2.4.6",
+    "scipy": "1.17.1",
+    "pandas": "3.1.1",
+    "matplotlib": "3.11.2",
+    "yaml": "6.0.3",
+    "hydra": "1.3.7",
+    "omegaconf": "2.3.1",
+    "pytest": "9.2.0",
+    "torch": "2.15.0+cu132",
+    "wandb": "0.31.0"
+  },
+  "import_failures": {},
+  "torch": {
+    "cuda_available": true,
+    "torch_cuda_build": "13.2",
+    "gpu_name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "gpu_vram_gb": 8.6,
+    "matmul_device": "cuda",
+    "matmul_finite": true,
+    "matmul_ms": 766.6
+  },
+  "status": "pass"
+}

@@ -225,3 +225,12 @@ data/cache/
 results/runs/
 results/*.sqlite
 checkpoints/
+
+# ens491-nkf
+data/raw/
+data/cache/
+results/runs/
+results/*.sqlite
+checkpoints/*
+wandb/
+outputs/
