@@ -248,9 +248,11 @@ Rules:
 - The filter receives `observations`: the list of valid observations whose `t_s`
   lies in `(t_k, t_{k+1}]` and that are available under the outage mask. An empty
   list means no update.
-- An observation is applied after the state has been propagated to `t_{k+1}`. The
-  offset `t_{k+1} - t_s` is recorded in diagnostics and is at most one inertial
-  sample period.
+- An observation is applied after the state has been propagated to `t_{k+1}`. This
+  is an approximation: the measurement is treated as if it had been taken at
+  `t_{k+1}`. The offset `t_{k+1} - t_s` is at most one inertial sample period and is
+  logged for every observation in diagnostics. A sensitivity check of the results to
+  this offset is PLANNED before the first baseline evaluation.
 - A simulated position update is produced only by a declared generator that reads
   the reference and adds seeded zero-mean noise. Its `source` is
   `simulated_from_reference`, its `R_meas` is the covariance of the generator noise,
@@ -259,7 +261,12 @@ Rules:
 - A pseudo-measurement (`pseudo_measurement`) carries no value derived from the
   reference.
 - The generator is the only path by which reference data can reach the filter after
-  initialisation.
+  initialisation. A contract test verifies that every `simulated_from_reference`
+  observation carries the provenance of the declared generator and that no other
+  code path constructs one.
+- Updates are reported per `source`. The run manifest holds separate counts for
+  `simulated_from_reference`, `dataset_sensor` and `pseudo_measurement` updates,
+  separate from the `init` label.
 
 ### 8.4 Initial state
 
@@ -306,6 +313,18 @@ Every gap is counted in diagnostics and listed in the run manifest. An outage wi
 must lie entirely inside one segment; otherwise it is reported as N/A with the reason
 `timestamp_gap`.
 
+A segment is run only if both conditions hold:
+
+- its duration is at least `pre_outage_init_s` plus the shortest outage duration
+  configured for the platform (with the planned values: 15 s for the UGV, 10 s for
+  the UAV);
+- a valid initial state (section 8.4) can be formed at its first sample. For an
+  oracle-initialised run this requires a valid reference sample within one inertial
+  sample period of the segment start.
+
+A segment that fails a condition is not run. It is reported as N/A with the reason
+`segment_too_short` or `no_initial_state`. No segment is started silently.
+
 Audit reference for KITTI drive `2011_09_30_drive_0016`: 2967 samples, `dt` 9.658 to
 10.342 ms, no non-increasing timestamp, no gap above 15 ms.
 
@@ -327,7 +346,9 @@ Audit reference for KITTI drive `2011_09_30_drive_0016`: 2967 samples, `dt` 9.65
 `P_0` is diagonal, in the error-state order of section 5.1:
 
 ```
-P_0 = blockdiag(s_p^2 I3, s_v^2 I3, s_theta^2 I3, s_bg^2 I3, s_ba^2 I3)
+P_0  = blockdiag(D(s_p), D(s_v), D(s_theta), D(s_bg), D(s_ba))
+D(s) = s^2 I3                        if s is a scalar
+D(s) = diag(s_x^2, s_y^2, s_z^2)     if s is a length-3 vector
 ```
 
 | Config field | Symbol | Unit | Valid range |
@@ -340,8 +361,9 @@ P_0 = blockdiag(s_p^2 I3, s_v^2 I3, s_theta^2 I3, s_bg^2 I3, s_ba^2 I3)
 
 Each field is a scalar or a length-3 vector. Validation: finite, strictly positive,
 inside the valid range; the assembled `P_0` is symmetric positive definite. A value
-outside the range is a configuration error, not a warning. The ranges are sanity
-bounds (PROPOSED), not tuned values. Numerical values per dataset: OPEN; selected on
+outside the range is a configuration error, not a warning. The ranges apply to each
+component. They are provisional configuration checks (PROPOSED): neither tuned values
+nor physical limits. Numerical values per dataset: OPEN; selected on
 training and validation data only and recorded in the run manifest.
 
 ## 11. Reference orientation, KITTI
@@ -376,7 +398,8 @@ and is not a verification.
 | Value of `g_w` magnitude | PROPOSED 9.81 |
 | Noise density values per platform | OPEN |
 | `P_0` values per dataset | OPEN |
-| `dt_max_factor` default (5) and `P_0` sanity bounds | PROPOSED |
+| `dt_max_factor` default (5), minimum segment rule and `P_0` configuration checks | PROPOSED |
+| Sensitivity of results to the delayed-observation approximation | PLANNED |
 | Order of roll and pitch rotations in the KITTI reference orientation | Documented from source: pykitti `pose_from_oxts_packet` computes `R = Rz Ry Rx` (`pykitti/utils.py`, commit `de33723`). Not observable numerically on the audited drive. The official development kit file was not inspected. |
 | Residuals of the levelled-frame check (0.012 m/s^2, 0.078 m/s rms) | OPEN |
 | Second KITTI drive with turns and stops | OPEN; does not block the freeze |
@@ -390,10 +413,11 @@ Status: PLANNED. The freeze requires these tests to exist and pass.
 | Quaternion convention | Hamilton product, `[w, x, y, z]` order, `R(q)` maps `b` to `w` |
 | Exponential map | `Exp` and its inverse agree; small-angle behaviour |
 | Error definition | `R_true = R_hat Exp([dtheta]x)` recovered by injection on the right |
-| Jacobians | `F` and `G` of section 5.3 against finite differences of the nominal model |
-| Reset | `G_r` against a finite-difference reset; `P` stays symmetric positive definite |
+| Jacobians | `F` and `G` of section 5.3 against finite differences of the nominal model, at zero and at small non-zero error states |
+| Reset | `G_r` against a finite-difference reset at small non-zero rotations; `P` stays symmetric positive definite |
 | Joseph update | `P` symmetric positive definite after update |
 | Noise convention | `Q_d` units and scaling with `dt_k` |
 | Time validation | Rejection, gap splitting and N/A outage windows of section 9 |
 | Initial covariance | Range and positive-definiteness validation of section 10.1 |
 | Leakage | Only allowlisted fields reach the filter; reference object is never passed |
+| Observation provenance | `simulated_from_reference` observations come only from the declared generator; per-source update counts are reported |
