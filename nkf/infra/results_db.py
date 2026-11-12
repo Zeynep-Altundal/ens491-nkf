@@ -51,7 +51,9 @@ def append_registry(registry_path, row):
         with open(registry_path, newline="") as f:
             fields = next(csv.reader(f))
     with open(registry_path, "a", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore", restval="")
+        w = csv.DictWriter(
+            f, fieldnames=fields, extrasaction="ignore", restval="", lineterminator="\n"
+        )
         if not has_header:
             w.writeheader()
         w.writerow(row)
