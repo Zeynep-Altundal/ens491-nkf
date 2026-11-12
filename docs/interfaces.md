@@ -213,6 +213,8 @@ Only these fields may reach the filter, the network, preprocessing or feature co
 
 Rejected KITTI fields: `af al au`, `wf wl wu` (rotated with the OXTS attitude
 solution; audit: `af - ax` = 0.1059 m/s^2 against g x pitch = 0.1086 m/s^2).
+Reference-only KITTI fields (section 8.2) are refused as inertial input in the same
+way: a request for a rejected or reference-only field is an error, not a silent drop.
 
 ### 8.2 Reference (evaluation only)
 
@@ -250,8 +252,8 @@ Rules:
   list means no update.
 - An observation is applied after the state has been propagated to `t_{k+1}`. This
   is an approximation: the measurement is treated as if it had been taken at
-  `t_{k+1}`. The offset `t_{k+1} - t_s` is at most one inertial sample period and is
-  logged for every observation in diagnostics. A sensitivity check of the results to
+  `t_{k+1}`. The offset `t_{k+1} - t_s` is non-negative, smaller than one inertial
+  sample period, and logged for every observation in diagnostics. A sensitivity check of the results to
   this offset is PLANNED before the first baseline evaluation.
 - A simulated position update is produced only by a declared generator that reads
   the reference and adds seeded zero-mean noise. Its `source` is
@@ -406,18 +408,25 @@ and is not a verification.
 
 ## 13. Contract tests
 
-Status: PLANNED. The freeze requires these tests to exist and pass.
+Status: IMPLEMENTED in `tests/fast/` (four files). The freeze requires them to pass.
+Tolerances and their sensitivity to step and perturbation size are reported in
+`docs/notes/contract_test_tolerances.md`.
 
-| Test | Checks |
-|---|---|
-| Quaternion convention | Hamilton product, `[w, x, y, z]` order, `R(q)` maps `b` to `w` |
-| Exponential map | `Exp` and its inverse agree; small-angle behaviour |
-| Error definition | `R_true = R_hat Exp([dtheta]x)` recovered by injection on the right |
-| Jacobians | `F` and `G` of section 5.3 against finite differences of the nominal model, at zero and at small non-zero error states |
-| Reset | `G_r` against a finite-difference reset at small non-zero rotations; `P` stays symmetric positive definite |
-| Joseph update | `P` symmetric positive definite after update |
-| Noise convention | `Q_d` units and scaling with `dt_k` |
-| Time validation | Rejection, gap splitting and N/A outage windows of section 9 |
-| Initial covariance | Range and positive-definiteness validation of section 10.1 |
-| Leakage | Only allowlisted fields reach the filter; reference object is never passed |
-| Observation provenance | `simulated_from_reference` observations come only from the declared generator; per-source update counts are reported |
+| Test | Checks | File |
+|---|---|---|
+| Quaternion convention | Hamilton product, `[w, x, y, z]` order, `R(q)` maps `b` to `w`; zero-norm and non-finite quaternions rejected | `test_conventions.py`, `test_contract_edges.py` |
+| Exponential map | `Exp` and its inverse agree from 0 to `pi - 1e-10` rad; small-angle behaviour | `test_conventions.py`, `test_contract_edges.py` |
+| Error definition | `R_true = R_hat Exp([dtheta]x)` recovered by injection on the right, not on the left | `test_conventions.py`, `test_contract_oracles.py` |
+| Jacobians | `F` and `G` of section 5.3 against an analytic block oracle and against finite differences of an independent model, at zero and at small non-zero error states | `test_conventions.py`, `test_contract_oracles.py` |
+| Reset | `G_r` against a finite-difference reset from an independent SO(3) reference at small non-zero rotations; `P` stays symmetric positive definite | `test_conventions.py`, `test_contract_oracles.py` |
+| Joseph update | `P` symmetric positive definite after update, including ill-conditioned covariances and a suboptimal gain | `test_conventions.py`, `test_contract_edges.py` |
+| Noise convention | `Q_d` units and scaling with `dt_k` | `test_conventions.py` |
+| Time validation | Rejection, gap splitting, segment-duration boundary, missing initial state and N/A outage windows of section 9 | `test_data_contract.py`, `test_contract_edges.py` |
+| Initial covariance | Block order, range and positive-definiteness validation of section 10.1 | `test_conventions.py`, `test_contract_edges.py` |
+| Leakage | Only allowlisted fields reach the filter; rejected and reference-only fields are refused; the reference object is never passed | `test_data_contract.py`, `test_contract_edges.py` |
+| Observation provenance and timing | `simulated_from_reference` observations come only from the declared generator; per-source update counts; offset `t_{k+1} - t_s` in `[0, dt_k)` | `test_data_contract.py`, `test_contract_edges.py` |
+
+The tests use synthetic values only. They verify the conventions and their
+implementation in `nkf/filters/conventions.py` and `nkf/data/sequence.py`; they are not
+evidence about any dataset or about filter performance. `propagate_nominal` is a single
+step used by the Jacobian tests; it is not a strapdown implementation over data.

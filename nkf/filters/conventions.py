@@ -27,6 +27,23 @@ P0_RANGES = {
 }
 
 
+def _finite_vector(u, size, name):
+    """Validated float64 vector. Non-finite input is an error, never repaired."""
+    v = np.asarray(u, dtype=np.float64)
+    if v.shape != (size,) or not np.all(np.isfinite(v)):
+        raise ValueError(f"{name} must be a finite vector of length {size}")
+    return v
+
+
+def _unit_quaternion(q):
+    """Validated unit quaternion [w, x, y, z]. A zero or non-finite quaternion is an error."""
+    v = _finite_vector(q, 4, "quaternion")
+    norm = float(np.linalg.norm(v))
+    if norm < 1e-12:
+        raise ValueError("quaternion norm is zero")
+    return v / norm
+
+
 def skew(u):
     """Skew-symmetric matrix [u]x."""
     x, y, z = (float(c) for c in u)
@@ -35,7 +52,7 @@ def skew(u):
 
 def so3_exp(rotvec):
     """SO(3) exponential map of a rotation vector."""
-    v = np.asarray(rotvec, dtype=np.float64)
+    v = _finite_vector(rotvec, 3, "rotation vector")
     angle = float(np.linalg.norm(v))
     k = skew(v)
     if angle < 1e-8:
@@ -46,14 +63,29 @@ def so3_exp(rotvec):
 
 
 def so3_log(rot):
-    """Rotation vector of a rotation matrix (angle below pi)."""
+    """Rotation vector of a rotation matrix, angle in [0, pi].
+
+    The angle uses atan2 and stays accurate near 0 and near pi. Near pi the axis is
+    taken from the symmetric part of the matrix; at exactly pi the sign of the axis
+    is not defined by the rotation and either sign is returned.
+    """
     r = np.asarray(rot, dtype=np.float64)
-    cos_angle = min(1.0, max(-1.0, (np.trace(r) - 1.0) / 2.0))
-    angle = math.acos(cos_angle)
+    if r.shape != (3, 3) or not np.all(np.isfinite(r)):
+        raise ValueError("rotation matrix must be a finite 3x3 array")
     vee = np.array([r[2, 1] - r[1, 2], r[0, 2] - r[2, 0], r[1, 0] - r[0, 1]])
-    if angle < 1e-8:
+    sin_angle = 0.5 * float(np.linalg.norm(vee))
+    cos_angle = 0.5 * (float(np.trace(r)) - 1.0)
+    angle = math.atan2(sin_angle, cos_angle)
+    if sin_angle < 1e-8 and cos_angle > 0.0:
         return 0.5 * vee
-    return angle / (2.0 * math.sin(angle)) * vee
+    if cos_angle > 0.0 or sin_angle > 1e-6:
+        return angle / (2.0 * sin_angle) * vee
+    outer = (0.5 * (r + r.T) - cos_angle * np.eye(3)) / (1.0 - cos_angle)
+    i = int(np.argmax(np.diag(outer)))
+    axis = outer[:, i] / math.sqrt(outer[i, i])
+    if float(axis @ vee) < 0.0:
+        axis = -axis
+    return angle * axis
 
 
 def quat_mul(q1, q2):
@@ -72,7 +104,7 @@ def quat_mul(q1, q2):
 
 def quat_from_rotvec(rotvec):
     """Unit quaternion q{v} of a rotation vector."""
-    v = np.asarray(rotvec, dtype=np.float64)
+    v = _finite_vector(rotvec, 3, "rotation vector")
     angle = float(np.linalg.norm(v))
     if angle < 1e-8:
         q = np.concatenate(([1.0], 0.5 * v))
@@ -83,7 +115,7 @@ def quat_from_rotvec(rotvec):
 
 def quat_to_rot(q):
     """Rotation matrix R_wb of a unit quaternion: maps body vectors to the world frame."""
-    w, x, y, z = np.asarray(q, dtype=np.float64) / np.linalg.norm(q)
+    w, x, y, z = _unit_quaternion(q)
     return np.array(
         [
             [1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y)],
@@ -95,9 +127,11 @@ def quat_to_rot(q):
 
 def propagate_nominal(p, v, q, b_g, b_a, gyro, accel, dt, g_w=GRAVITY_W):
     """One nominal step with the measurement held constant, section 4."""
+    if not (math.isfinite(dt) and dt > 0.0):
+        raise ValueError("dt must be finite and strictly positive")
     rot = quat_to_rot(q)
-    w = np.asarray(gyro, dtype=np.float64) - b_g
-    a = rot @ (np.asarray(accel, dtype=np.float64) - b_a) + g_w
+    w = _finite_vector(gyro, 3, "gyro") - b_g
+    a = rot @ (_finite_vector(accel, 3, "accel") - b_a) + g_w
     q_next = quat_mul(q, quat_from_rotvec(w * dt))
     q_next = q_next / np.linalg.norm(q_next)
     v_next = v + a * dt
