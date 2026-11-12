@@ -37,3 +37,11 @@ euroc_mav,V1_01_easy,state_groundtruth_estimate0/data.csv,by name,v_RS_R,m/s,ref
 euroc_mav,V1_01_easy,state_groundtruth_estimate0/data.csv,by name,b_w_RS_S,rad/s,sensor frame S (body frame = inertial sensor frame),reference_only,reference bias estimate; makes a run a diagnostic if used
 euroc_mav,V1_01_easy,state_groundtruth_estimate0/data.csv,by name,b_a_RS_S,m/s^2,sensor frame S (body frame = inertial sensor frame),reference_only,reference bias estimate; makes a run a diagnostic if used
 euroc_mav,V1_01_easy,vicon0/data.csv,by name,"p_RS_R, q_RS","m, [w, x, y, z]",motion-capture frame,not_used,raw pose with a non-identity extrinsic
+euroc_mav,V1_02_medium,imu0/data.csv,by name,"w_RS_S_{x,y,z}",rad/s,sensor frame S (body frame = inertial sensor frame),inertial_input,
+euroc_mav,V1_02_medium,imu0/data.csv,by name,"a_RS_S_{x,y,z}",m/s^2,sensor frame S (body frame = inertial sensor frame),inertial_input,specific force
+euroc_mav,V1_02_medium,state_groundtruth_estimate0/data.csv,by name,p_RS_R,m,"reference frame R (motion-capture frame, not ENU)",reference_only,
+euroc_mav,V1_02_medium,state_groundtruth_estimate0/data.csv,by name,q_RS,"[w, x, y, z]",body to reference,reference_only,scalar first
+euroc_mav,V1_02_medium,state_groundtruth_estimate0/data.csv,by name,v_RS_R,m/s,reference frame R,reference_only,
+euroc_mav,V1_02_medium,state_groundtruth_estimate0/data.csv,by name,b_w_RS_S,rad/s,sensor frame S (body frame = inertial sensor frame),reference_only,reference bias estimate; makes a run a diagnostic if used
+euroc_mav,V1_02_medium,state_groundtruth_estimate0/data.csv,by name,b_a_RS_S,m/s^2,sensor frame S (body frame = inertial sensor frame),reference_only,reference bias estimate; makes a run a diagnostic if used
+euroc_mav,V1_02_medium,vicon0/data.csv,by name,"p_RS_R, q_RS","m, [w, x, y, z]",motion-capture frame,not_used,raw pose with a non-identity extrinsic

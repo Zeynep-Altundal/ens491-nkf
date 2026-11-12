@@ -86,7 +86,7 @@ zero-velocity updates or cornering.
   corrected by the unit's internal navigation filter. Input and reference originate
   from the same OXTS unit; this coupling limits independent ground-truth claims.
 - OPEN: lever arm and mounting rotation between the OXTS unit and the vehicle frame.
-- NOT RECORDED: EuRoC audit; any second KITTI drive.
+- NOT RECORDED: any second KITTI drive.
 
 ### Numerical check of the reference orientation (12 November 2026)
 
@@ -203,4 +203,76 @@ paired with the nearest inertial sample.
   halves when two consecutive samples are averaged, which is consistent with
   high-frequency content in the angular rate; this does not establish its cause and
   does not show that another integration scheme reduces trajectory error.
-- One flight only. OPEN: all other flights; `P_0` values.
+- OPEN: flights other than `V1_01_easy` and `V1_02_medium`; `P_0` values.
+
+## EuRoC MAV, flight V1_02_medium (ASL format)
+
+Status: read-only audit of one validation flight (`configs/splits/euroc.yaml`). Not a split
+decision. No filter was run. The locked test flight `V1_03` was not opened. Audited
+13 November 2026. Related issue: #1. Same archive, same stream layout and same checks as
+`V1_01_easy` above.
+
+### Source
+
+| Item | Value |
+|---|---|
+| Landing page | https://doi.org/10.3929/ethz-b-000690084 (ETH Research Collection) |
+| Archive | `vicon_room1.zip`, 6 042 263 426 bytes; SHA-256 recomputed on the downloaded copy and equal to the value above |
+| Member used | `vicon_room1/V1_02_medium/V1_02_medium.zip`, 668 079 368 bytes |
+| SHA-256 | `0cf5d44baf7aac5d6d705dfb6c5abdd097139bc95aa252dc0c00c66d479ebfc2` |
+| Extracted | The whole member archive was unpacked locally (cameras and point cloud included, not audited); the raw ROS recording `V1_02_medium.bag` was not extracted |
+| Local storage | Outside the repository |
+
+SHA-256 of the audited streams (local copies):
+
+| Stream | SHA-256 |
+|---|---|
+| `imu0/data.csv` | `51804ce6362dc200fff3ed6a3aba1df769528badf1a877d19d5cac976a544c09` |
+| `state_groundtruth_estimate0/data.csv` | `fed415eee44313584b9c4f61010dac146d5e4a4a35301db25b1ecd7d4d91b5f0` |
+| `vicon0/data.csv` | `0ddd5df7cd0052e80c10b18dd518686c6a8236a6bacf715d2f79f18cecfd8b1d` |
+
+Fields and units are the same as for `V1_01_easy`. The inertial sensor metadata
+(`imu0/sensor.yaml`) reports the same ADIS16448 noise parameters as `V1_01_easy`.
+
+### Numerical checks
+
+Reproduced by `scripts/audit_euroc.py --mav0 <flight>/mav0`.
+
+| Check | Result |
+|---|---|
+| Inertial stream | 17 100 samples, 85.495 s; dt mean 5.0000 ms, std 0.0001 ms, min 4.9999 ms, max 5.0002 ms; 0 non-increasing; 0 gaps |
+| Reference stream | 16 702 samples, 83.505 s; dt mean 5.0000 ms, std 0.0002 ms, min 4.9997 ms, max 5.0002 ms; 0 non-increasing; 0 gaps |
+| Overlap | Reference starts 0.995 s after and ends 0.995 s before the inertial stream |
+| Time-stamp pairing | Offset to the nearest inertial sample within +-256 ns, mean absolute 59 ns |
+| Mean accelerometer norm | 9.8822 m/s^2 (bias not removed) |
+| Reference quaternion norm | Largest deviation from 1: 1.5e-4 |
+| Mean of `R(q) (a - b_a)` | [0.0133, 0.0148, 9.8097] m/s^2 |
+| Mean of `R(q)^T (a - b_a)` | [-2.4062, -0.9405, 3.4137] m/s^2 |
+| Gyroscope against reference orientation, 6000 steps, rms angle per step | Right-multiplied, sample k held: 2.31e-4 rad; left-multiplied: 4.48e-3 rad |
+| Same, other choices of the rate | Sample k+1 held: 2.41e-4 rad; mean of samples k and k+1: 8.6e-5 rad |
+| Change of the gyroscope reading between samples | rms 0.0878 rad/s |
+| Reference bias estimates, first sample | Gyroscope [-0.0022, 0.0207, 0.0758] rad/s; accelerometer [-0.0133, 0.1035, 0.0931] m/s^2 |
+| Reference bias estimates, last sample | Gyroscope [-0.0022, 0.0208, 0.0758] rad/s; accelerometer [-0.0147, 0.1050, 0.0930] m/s^2 |
+
+### Findings
+
+- VERIFIED on this flight, as on `V1_01_easy`: monotonic time stamps at 200 Hz without
+  gaps; the two streams share one time-stamp representation; the reference quaternion is
+  consistent with `R_wb` and a gravity-aligned z-up frame (the mean of `R(q)(a - b_a)` is
+  close to +9.81 m/s^2 on z, and the transposed rotation is not); integrating the
+  gyroscope with the increment on the right agrees with the reference orientation about
+  19 times better than with the increment on the left (`V1_01_easy`: about 10 times).
+- Observation, cause OPEN: the first accelerometer bias estimate differs between the two
+  flights (y component 0.1035 here, 0.5477 on `V1_01_easy`), while the gyroscope bias
+  estimates are nearly equal. This audit does not explain the difference.
+- Observation: the largest deviation of the reference quaternion norm from 1 is 1.5e-4
+  here and 2.1e-5 on `V1_01_easy`. The loader normalises; no effect was measured.
+
+### Limitations
+
+- The same limitations as for `V1_01_easy` apply: the 256 ns pairing does not show a zero
+  physical time offset; the reference is a batch solution that uses the same inertial
+  measurements and is not independent of the input; the reference bias estimates are
+  reference-only fields; an initial state from the reference exists only from 0.995 s
+  after the first inertial sample.
+- Two EuRoC flights audited. OPEN: all other flights.
