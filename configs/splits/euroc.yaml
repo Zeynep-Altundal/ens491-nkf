@@ -1,0 +1,6 @@
+# Proposed split for the W02 audit. Not locked; suffixes and eligibility to be
+# resolved against the actual manifest.
+status: PROPOSED
+train: [MH_01, MH_02, MH_03, V1_01, V2_01]
+validation: [MH_04, V1_02, V2_02]
+test_locked: [MH_05, V1_03, V2_03]

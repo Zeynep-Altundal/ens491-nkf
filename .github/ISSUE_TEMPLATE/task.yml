@@ -1,0 +1,39 @@
+name: Task
+description: Planned work item with acceptance criteria
+title: "[Wxx][UGV/UAV/SHARED] verb + deliverable"
+labels: ["type:feature"]
+body:
+  - type: input
+    id: meta
+    attributes:
+      label: Owner / Reviewer / Week / Milestone / Planned hours
+    validations: {required: true}
+  - type: textarea
+    id: problem
+    attributes: {label: Problem or hypothesis}
+    validations: {required: true}
+  - type: textarea
+    id: inputs
+    attributes: {label: Inputs and dependencies (issue IDs)}
+  - type: textarea
+    id: scope
+    attributes: {label: Scope / non-goals / interface changes}
+  - type: textarea
+    id: outputs
+    attributes: {label: Output paths and acceptance criteria}
+    validations: {required: true}
+  - type: textarea
+    id: wednesday
+    attributes: {label: Wednesday integration command and expected behaviour}
+  - type: textarea
+    id: friday
+    attributes: {label: Friday validation command / dataset split / seed}
+  - type: textarea
+    id: runs
+    attributes: {label: Run IDs or justified N/A}
+  - type: textarea
+    id: risks
+    attributes: {label: Risks / fallback / claim destination}
+  - type: textarea
+    id: actual
+    attributes: {label: Actual hours / accepted evidence / variance reason}

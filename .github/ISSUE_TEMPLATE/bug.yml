@@ -1,0 +1,31 @@
+name: Bug
+description: Defect with a minimal reproduction
+title: "[BUG] "
+labels: ["type:bug"]
+body:
+  - type: textarea
+    id: expected
+    attributes: {label: Expected behaviour}
+    validations: {required: true}
+  - type: textarea
+    id: observed
+    attributes: {label: Observed behaviour}
+    validations: {required: true}
+  - type: textarea
+    id: repro
+    attributes: {label: Minimal reproduction}
+    validations: {required: true}
+  - type: input
+    id: env
+    attributes: {label: Environment / source SHA / input hash}
+  - type: input
+    id: run
+    attributes: {label: Failing run ID}
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options: [P0-blocker, P1-required, P2-stretch]
+  - type: textarea
+    id: regression
+    attributes: {label: Regression test}

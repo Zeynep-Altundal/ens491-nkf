@@ -1,0 +1,22 @@
+name: Decision
+description: Decision request with options and evidence
+title: "[DECISION] "
+labels: ["type:decision"]
+body:
+  - type: textarea
+    id: question
+    attributes: {label: Question}
+    validations: {required: true}
+  - type: textarea
+    id: options
+    attributes: {label: Options (two or more)}
+    validations: {required: true}
+  - type: textarea
+    id: evidence
+    attributes: {label: Evidence links}
+  - type: input
+    id: owner
+    attributes: {label: Owner / due date / advisor needed (yes or no)}
+  - type: textarea
+    id: outcome
+    attributes: {label: Decision and consequences}

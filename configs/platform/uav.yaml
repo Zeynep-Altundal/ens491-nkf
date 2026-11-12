@@ -1,0 +1,8 @@
+platform: uav
+dataset: euroc_mav
+constraints: []             # conditional flight-regime priors decided at W06
+position_update:
+  source: ground_truth      # simulated absolute-position updates, never GNSS
+  rate_hz: 1.0
+  noise_std_m: 0.5          # proposed; frozen or revised on validation with an ADR
+divergence_limit_m: 20.0    # proposed study threshold; frozen at M1

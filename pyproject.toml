@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nkf"
+version = "0.0.0"
+description = "Cross-platform, constraint-aware neural Kalman filtering for GNSS-denied navigation"
+requires-python = ">=3.11"
+dependencies = ["numpy>=1.26"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[tool.setuptools.packages.find]
+include = ["nkf*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "fast: runs on every pull request, synthetic data only",
+  "slow: needs real data or long runtime",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "B", "UP"]

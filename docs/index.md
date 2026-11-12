@@ -1,0 +1,12 @@
+# Documentation index
+
+| Document | Purpose | Status |
+|---|---|---|
+| `problem_statement.md` | Research question, scope, hypotheses | DRAFT |
+| `interfaces.md` | Sequence, filter and evaluation contracts | DRAFT, not frozen |
+| `advisor_dashboard.md` | Weekly status landing page | Initial snapshot |
+| `research_status.md` | Hypothesis maturity (R0-R6) | Initial snapshot |
+| `data_manifest.md` | Dataset audit | NOT RECORDED |
+| `decisions.md` | Decision log | Empty |
+| `adr/` | Architecture decision records | Empty |
+| `weekly/` | Weekly reports and ledger | W01 template |

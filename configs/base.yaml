@@ -1,0 +1,4 @@
+# Shared defaults. Platform, method, outage and split files override these.
+seed: 0
+dtype: float64
+results_dir: results/runs

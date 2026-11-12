@@ -1,0 +1,29 @@
+name: Experiment
+description: Registered experiment with a falsification rule
+title: "[EXP] "
+labels: ["type:experiment"]
+body:
+  - type: textarea
+    id: hypothesis
+    attributes: {label: Hypothesis}
+    validations: {required: true}
+  - type: input
+    id: endpoint
+    attributes: {label: Primary endpoint}
+    validations: {required: true}
+  - type: input
+    id: protocol
+    attributes: {label: Protocol version / split}
+  - type: textarea
+    id: matrix
+    attributes: {label: Method matrix and seeds}
+  - type: input
+    id: budget
+    attributes: {label: Compute budget}
+  - type: textarea
+    id: rule
+    attributes: {label: Acceptance / falsification rule}
+    validations: {required: true}
+  - type: textarea
+    id: manifest
+    attributes: {label: Output manifest}

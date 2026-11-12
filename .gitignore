@@ -218,3 +218,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Project data and run payloads
+data/raw/
+data/cache/
+results/runs/
+results/*.sqlite
+checkpoints/

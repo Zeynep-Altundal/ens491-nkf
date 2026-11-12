@@ -1,0 +1,4 @@
+platform: ugv
+dataset: kitti_raw_oxts
+constraints: [nhc, zupt]
+divergence_limit_m: 100.0   # proposed study threshold; frozen at M1
