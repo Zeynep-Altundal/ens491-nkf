@@ -1,19 +1,24 @@
 """Synthetic UGV / UAV sequences for W01 pipeline tests.
 
-PROPOSED CONVENTIONS (must match docs/interfaces.md; change here if Zeynep's contract differs):
-  - World frame: ENU, z up. Gravity vector g_w = [0, 0, -9.81] m/s^2.
+Conventions follow docs/interfaces.md (ADR-0001):
+  - World frame: right-handed, z up. Gravity vector g_w = [0, 0, -9.81] m/s^2.
   - Attitude: rotation body->world R_wb. Quaternions are Hamilton, scalar-first [w, x, y, z].
   - accel_m_s2 = specific force in body frame = R_wb^T (a_w - g_w).
     Stationary and level -> [0, 0, +9.81].
   - gyro_rad_s = body-frame angular rate.
   - Time origin: t_s[0] = 0.0, seconds, strictly increasing.
-  - Reference (ground truth) is for evaluation only; never pass it to the online filter.
+  - The inertial input and the reference are returned as separate objects (sections 8.1,
+    8.2). The reference is for evaluation, for the oracle initial state and for the declared
+    generator of simulated position updates; it is never passed to a filter.
 """
 
 import hashlib
+from dataclasses import dataclass
 
 import numpy as np
 from scipy.spatial.transform import Rotation
+
+from nkf.data.sequence import ImuSequence, Reference, simulate_position_updates
 
 GRAVITY_W = np.array([0.0, 0.0, -9.81])
 
@@ -79,8 +84,24 @@ def hash_arrays(*arrays):
     return h.hexdigest()
 
 
+@dataclass(frozen=True)
+class SyntheticSequence:
+    """One synthetic sequence in the object layout of docs/interfaces.md, section 8."""
+
+    id: str
+    platform: str
+    imu: ImuSequence
+    reference: Reference
+    observations: list
+    outage_s: tuple
+    hidden_observations: int
+    truth: dict
+    source_hash: str
+    split_id: str
+
+
 def make_synthetic(platform, seed=0, duration_s=None, imu_hz=None, cfg=None):
-    """Build one synthetic Sequence dict for platform 'ugv' or 'uav'."""
+    """Build one synthetic sequence for platform 'ugv' or 'uav'."""
     cfg = cfg or {}
     rng = np.random.default_rng(seed)
     if platform == "ugv":
@@ -115,37 +136,34 @@ def make_synthetic(platform, seed=0, duration_s=None, imu_hz=None, cfg=None):
     gyro = gyro_true + gyro_bias + rng.normal(0.0, gyro_std, gyro_true.shape)
     accel = accel_true + accel_bias + rng.normal(0.0, accel_std, accel_true.shape)
 
-    # 1 Hz noisy position observations; hidden during the outage window
-    obs_std = cfg.get("obs_pos_std_m", 0.5)
-    obs_idx = np.arange(0, len(t), int(imu_hz))
-    obs_t = t[obs_idx]
-    obs_p = p_w[obs_idx] + rng.normal(0.0, obs_std, (len(obs_idx), 3))
-    outage = cfg.get("outage_s", [60.0, 90.0] if platform == "ugv" else [30.0, 40.0])
-    available = ~((obs_t >= outage[0]) & (obs_t < outage[1]))
+    # scipy returns [x, y, z, w]; the contract order is [w, x, y, z].
+    q_wb = np.roll(R_wb.as_quat(), 1, axis=1)
+    imu = ImuSequence(t, gyro, accel)
+    reference = Reference(t, p_w, np.ones(len(t), dtype=bool), v_w, q_wb)
 
-    seq = {
-        "id": f"synthetic_{platform}_s{seed:02d}",
-        "platform": platform,
-        "t_s": t,
-        "gyro_rad_s": gyro,
-        "accel_m_s2": accel,
-        "reference_pose": {
-            "p_w": p_w,
-            "v_w": v_w,
-            "q_wb_wxyz": R_wb.as_quat(scalar_first=True),
-        },
-        "reference_mask": np.ones(len(t), dtype=bool),
-        "calibration": {
+    # 1 Hz simulated position updates from the declared generator; hidden during the outage.
+    obs_std = cfg.get("obs_pos_std_m", 0.5)
+    outage = tuple(cfg.get("outage_s", [60.0, 90.0] if platform == "ugv" else [30.0, 40.0]))
+    generated = simulate_position_updates(
+        reference, 1.0, obs_std, seed=seed, config_hash=cfg.get("config_hash", "synthetic")
+    )
+    observations = [o for o in generated if not (outage[0] <= o.t_s < outage[1])]
+
+    return SyntheticSequence(
+        id=f"synthetic_{platform}_s{seed:02d}",
+        platform=platform,
+        imu=imu,
+        reference=reference,
+        observations=observations,
+        outage_s=outage,
+        hidden_observations=len(generated) - len(observations),
+        truth={
             "imu_hz": imu_hz,
             "gyro_bias_true": gyro_bias,
             "accel_bias_true": accel_bias,
             "gyro_noise_std": gyro_std,
             "accel_noise_std": accel_std,
         },
-        "source_hash": "",
-        "observation_stream": {"t_s": obs_t, "p_w": obs_p, "std_m": obs_std, "outage_s": outage},
-        "availability_mask": available,
-        "split_id": "synthetic",
-    }
-    seq["source_hash"] = hash_arrays(t, gyro, accel, p_w, obs_p)
-    return seq
+        source_hash=hash_arrays(t, gyro, accel, p_w),
+        split_id="synthetic",
+    )

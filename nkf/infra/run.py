@@ -1,4 +1,8 @@
-"""infra.run: W01 synthetic pipeline. Sequence -> dummy filter -> metrics -> SQLite -> run bundle.
+"""infra.run: W01 synthetic pipeline. Sequence -> strapdown -> metrics -> SQLite -> run bundle.
+
+The estimator is the strapdown baseline of docs/interfaces.md, section 4, with an oracle
+initial state and no measurement update. It receives the inertial input and the initial
+state only.
 
 Usage (repo root, nkf env):
     python -m nkf.infra.run --platform ugv
@@ -14,10 +18,10 @@ import traceback
 import numpy as np
 import yaml
 
-from nkf.data.sequence import validate_sequence
+from nkf.baselines.strapdown import oracle_initial_state, run_strapdown
+from nkf.data.sequence import count_updates_by_source
 from nkf.data.synthetic import make_synthetic
 from nkf.eval.metrics import position_metrics
-from nkf.filters.api import run_filter
 from nkf.infra import provenance, results_db
 
 
@@ -54,9 +58,9 @@ def write_bundle(bundle, cfg, seq, est, db_rows):
         )
     np.savez_compressed(
         os.path.join(bundle, "trajectory.npz"),
-        t_s=seq["t_s"],
+        t_s=seq.imu.t_s,
         p_est=est["p_w"],
-        p_ref=seq["reference_pose"]["p_w"],
+        p_ref=seq.reference.p_w,
     )
     return {
         name: provenance.sha256_file(os.path.join(bundle, name))
@@ -102,16 +106,17 @@ def run_synthetic(cfg):
             seed=cfg["seed"],
             duration_s=data_cfg["duration_s"],
             imu_hz=data_cfg["imu_hz"],
-            cfg=data_cfg,
+            cfg={**data_cfg, "config_hash": cfg_hash},
         )
-        validate_sequence(seq)
-        est = run_filter(seq)
+        initial = oracle_initial_state(seq.reference)
+        # run_strapdown validates the time base and refuses a sequence with a gap.
+        p_est, _v_est, _q_est = run_strapdown(seq.imu, initial)
+        est = {"p_w": p_est}
 
-        outage = seq["observation_stream"]["outage_s"]
-        rows = position_metrics(est["p_w"], seq["reference_pose"]["p_w"], seq["t_s"], outage)
-        n = len(seq["t_s"])
+        rows = position_metrics(p_est, seq.reference.p_w, seq.imu.t_s, seq.outage_s)
+        n = len(seq.imu.t_s)
         db_rows = [
-            (run_id, seq["id"], seq["split_id"], oid, m, s, v, u, "position_3d", n, "ok", None)
+            (run_id, seq.id, seq.split_id, oid, m, s, v, u, "position_3d", n, "ok", None)
             for (m, s, v, u, oid) in rows
         ]
         files = write_bundle(bundle, cfg, seq, est, db_rows)
@@ -129,11 +134,18 @@ def run_synthetic(cfg):
             "protocol_version": cfg["protocol_version"],
             "code": {"git_sha": code_sha, "git_dirty": dirty},
             "data": {
-                "sequence_id": seq["id"],
-                "source_hash": seq["source_hash"],
-                "split_id": seq["split_id"],
+                "sequence_id": seq.id,
+                "source_hash": seq.source_hash,
+                "split_id": seq.split_id,
             },
             "method": {"name": cfg["method"], "seed": cfg["seed"], "config_hash": cfg_hash},
+            "init": initial.init,
+            "updates_by_source": count_updates_by_source([]),
+            "observations": {
+                "generated_available": len(seq.observations),
+                "hidden_in_outage": seq.hidden_observations,
+                "used_by_estimator": 0,
+            },
             "outputs": files,
             "note": "Synthetic smoke run; no estimator performance claim.",
         }
@@ -144,7 +156,7 @@ def run_synthetic(cfg):
         results_db.insert_metrics(con, db_rows)
         results_db.insert_artifacts(con, run_id, files)
         results_db.update_run(
-            con, run_id, status="completed", end_utc=end_utc, source_hash=seq["source_hash"]
+            con, run_id, status="completed", end_utc=end_utc, source_hash=seq.source_hash
         )
         con.commit()
         results_db.append_registry(

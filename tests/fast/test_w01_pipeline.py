@@ -1,12 +1,13 @@
-"""W01 fast tests: Sequence contract, conventions, provenance and synthetic pipeline smoke."""
+"""W01 fast tests: synthetic sequences, conventions, provenance and synthetic pipeline smoke."""
 
+import json
 import sqlite3
 
 import numpy as np
 import pytest
 from scipy.spatial.transform import Rotation
 
-from nkf.data.sequence import validate_sequence
+from nkf.data.sequence import POSITION_GENERATOR, ImuSequence, Reference, split_into_segments
 from nkf.data.synthetic import make_synthetic
 from nkf.infra import provenance
 from nkf.infra.run import load_config, run_synthetic
@@ -14,23 +15,34 @@ from nkf.infra.run import load_config, run_synthetic
 pytestmark = pytest.mark.fast
 
 
+def _rotation(q_wxyz):
+    """scipy expects [x, y, z, w]; the contract order is [w, x, y, z]."""
+    return Rotation.from_quat(np.roll(q_wxyz, -1))
+
+
 @pytest.mark.parametrize("platform", ["ugv", "uav"])
 def test_sequence_contract(platform):
-    assert validate_sequence(make_synthetic(platform, seed=0))
+    seq = make_synthetic(platform, seed=0)
+    assert isinstance(seq.imu, ImuSequence) and isinstance(seq.reference, Reference)
+    n = len(seq.imu.t_s)
+    assert seq.imu.gyro_rad_s.shape == (n, 3) and seq.imu.accel_m_s2.shape == (n, 3)
+    assert seq.reference.p_w.shape == (n, 3) and seq.reference.q_wb.shape == (n, 4)
+    assert np.allclose(np.linalg.norm(seq.reference.q_wb, axis=1), 1.0, atol=1e-9)
+    segments, gaps = split_into_segments(seq.imu.t_s, seq.imu.gyro_rad_s, seq.imu.accel_m_s2)
+    assert gaps == 0 and len(segments) == 1
 
 
 def test_bad_time_rejected():
     seq = make_synthetic("ugv", seed=0, duration_s=5.0)
-    seq["t_s"] = seq["t_s"][::-1].copy()
     with pytest.raises(ValueError):
-        validate_sequence(seq)
+        split_into_segments(seq.imu.t_s[::-1].copy(), seq.imu.gyro_rad_s, seq.imu.accel_m_s2)
 
 
 def test_stationary_specific_force_points_up():
     # UGV stops between ~40 and ~48 s; level and stationary -> accel ~ [0, 0, +9.81]
     seq = make_synthetic("ugv", seed=0, cfg={"accel_noise_std": 0.0, "accel_bias_std": 0.0})
-    idx = (seq["t_s"] > 42.0) & (seq["t_s"] < 47.0)
-    assert np.allclose(seq["accel_m_s2"][idx].mean(axis=0), [0.0, 0.0, 9.81], atol=1e-3)
+    idx = (seq.imu.t_s > 42.0) & (seq.imu.t_s < 47.0)
+    assert np.allclose(seq.imu.accel_m_s2[idx].mean(axis=0), [0.0, 0.0, 9.81], atol=1e-3)
 
 
 @pytest.mark.parametrize("platform", ["ugv", "uav"])
@@ -38,23 +50,37 @@ def test_gyro_integrates_to_reference_attitude(platform):
     seq = make_synthetic(
         platform, seed=0, duration_s=10.0, cfg={"gyro_noise_std": 0.0, "gyro_bias_std": 0.0}
     )
-    q = seq["reference_pose"]["q_wb_wxyz"]
-    R = Rotation.from_quat(q[0], scalar_first=True)
-    dt = np.diff(seq["t_s"])
+    q = seq.reference.q_wb
+    rot = _rotation(q[0])
+    dt = np.diff(seq.imu.t_s)
     for k in range(len(dt)):
-        R = R * Rotation.from_rotvec(seq["gyro_rad_s"][k] * dt[k])
-    err = (R.inv() * Rotation.from_quat(q[-1], scalar_first=True)).magnitude()
+        rot = rot * Rotation.from_rotvec(seq.imu.gyro_rad_s[k] * dt[k])
+    err = (rot.inv() * _rotation(q[-1])).magnitude()
     assert err < 1e-6
 
 
 def test_seed_determinism():
     a = make_synthetic("uav", seed=3, duration_s=5.0)
     b = make_synthetic("uav", seed=3, duration_s=5.0)
-    assert a["source_hash"] == b["source_hash"]
+    assert a.source_hash == b.source_hash
+    assert all(
+        np.array_equal(x.z, y.z) for x, y in zip(a.observations, b.observations, strict=True)
+    )
+
+
+@pytest.mark.parametrize("platform", ["ugv", "uav"])
+def test_observations_come_from_the_generator_and_are_hidden_in_the_outage(platform):
+    seq = make_synthetic(platform, seed=0)
+    start, stop = seq.outage_s
+    assert seq.hidden_observations > 0
+    assert all(not (start <= o.t_s < stop) for o in seq.observations)
+    for o in seq.observations:
+        assert o.source == "simulated_from_reference"
+        assert o.provenance["generator"] == POSITION_GENERATOR
 
 
 def test_run_id_format():
-    rid = provenance.make_run_id("ugv", "strapdown_dummy", 0, "a" * 64, "b" * 40)
+    rid = provenance.make_run_id("ugv", "strapdown", 0, "a" * 64, "b" * 40)
     assert provenance.RUN_ID_RE.match(rid)
 
 
@@ -87,6 +113,10 @@ def test_pipeline_writes_bundle_db_and_registry(tmp_path):
             "resolved_config.yaml",
             "trajectory.npz",
         }
+        manifest = json.loads((b / "manifest.json").read_text())
+        assert manifest["init"] == "oracle"
+        assert sum(manifest["updates_by_source"].values()) == 0
+        assert manifest["observations"]["hidden_in_outage"] > 0
     lines = registry.read_text().strip().splitlines()
     assert lines[0] == "run_id,status,artifact_uri,sha256"
     assert len(lines) == 3

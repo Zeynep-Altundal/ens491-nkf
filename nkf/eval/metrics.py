@@ -1,4 +1,4 @@
-"""eval.metrics: W01 placeholder position metrics (no alignment). Owner: Betül (review)."""
+"""eval.metrics: W01 placeholder position metrics (no alignment)."""
 
 import numpy as np
 

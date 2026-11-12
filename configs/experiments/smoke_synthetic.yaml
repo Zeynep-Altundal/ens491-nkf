@@ -1,9 +1,9 @@
 # W01 synthetic pipeline smoke. Merged on top of configs/base.yaml; --platform/--seed override.
 protocol_version: "w01-v0"
-method: "strapdown_dummy"
+method: "strapdown"
 platform: "ugv"
 split_id: "synthetic"
-owner: "melike"
+owner: "neural-infrastructure"
 issue: "W01-M-2"
 purpose: "W01 synthetic pipeline smoke; no performance claim"
 

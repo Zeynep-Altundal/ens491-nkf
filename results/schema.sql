@@ -1,4 +1,4 @@
--- ens491-nkf results database schema (W01 v0). Owner: Melike.
+-- ens491-nkf results database schema (W01 v0).
 -- One row per run in runs; metrics are long-form; failed runs are stored, never deleted.
 
 CREATE TABLE IF NOT EXISTS runs (
