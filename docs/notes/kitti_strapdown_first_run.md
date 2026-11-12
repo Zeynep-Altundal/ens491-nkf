@@ -33,9 +33,12 @@ timestamp gap. Clean working tree.
 ## Vertical channel
 
 The vertical error grows with the square of time; the equivalent constant acceleration
-error is -0.0091 m/s^2. The reference is not consistent with itself in the vertical
-direction: its altitude changes by -0.11 m over the drive, while the integral of its
-own vertical velocity is -2.83 m. The strapdown estimate changes by -4.13 m.
+error is -0.0091 m/s^2. Two vertical quantities of the reference
+differ over the drive: its altitude changes by -0.11 m, while the integral of its
+vertical velocity is -2.83 m. The strapdown estimate changes by -4.13 m. The two
+reference channels may not be equivalent measurements of the same quantity; their
+definitions, their time alignment and the initial vertical velocity have not been
+checked. The difference is therefore not by itself evidence of a reference error.
 
 The mean accelerometer norm is 9.8119 m/s^2 and the gravity magnitude used is
 9.81 m/s^2. This difference would move the estimate upwards (about +0.8 m), opposite
