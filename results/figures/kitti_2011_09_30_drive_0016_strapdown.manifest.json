@@ -1,0 +1,82 @@
+{
+  "run_id": "20261112T130340Z_ugv_strapdown_s00_72821b0c",
+  "purpose": "first data-path and convention check; not a performance result",
+  "method": "strapdown",
+  "integration": "zero-order hold on sample k (contract section 4)",
+  "inertial_fields": [
+    "wx",
+    "wy",
+    "wz",
+    "ax",
+    "ay",
+    "az"
+  ],
+  "reference_use": "initial state at the first sample and evaluation only",
+  "platform": "ugv",
+  "sequence_id": "2011_09_30_drive_0016",
+  "init": "oracle",
+  "updates_by_source": {
+    "simulated_from_reference": 0,
+    "dataset_sensor": 0,
+    "pseudo_measurement": 0
+  },
+  "bias_estimation": false,
+  "gravity_w": [
+    0.0,
+    0.0,
+    -9.81
+  ],
+  "code_sha": "72821b0cb855bb4ec70893d31f7fa1e3a4e335e4",
+  "dirty_tree": false,
+  "input_sha256": "4ddb83c58ae007fee3191679fc5806b4df7f75fc29e83d3b6962d92bb52fc99d",
+  "segments": 1,
+  "timestamp_gaps": 0,
+  "dataset": {
+    "dataset": "kitti_raw_oxts_extract",
+    "samples": 2967,
+    "origin_lat_lon_alt": [
+      49.033553228861,
+      8.3950119439646,
+      112.42118835449
+    ],
+    "numsats_min": 5,
+    "posmode_values": [
+      4,
+      5,
+      6
+    ],
+    "pos_accuracy_max_m": 0.15456390264224
+  },
+  "metrics": {
+    "duration_s": 29.65940127,
+    "samples": 2967,
+    "reference_path_length_m": 416.15000004417436,
+    "initial_position_error_m": 0.0,
+    "rmse_position_3d_m": 1.9823522156665638,
+    "final_position_error_3d_m": 4.014664500590707,
+    "max_position_error_3d_m": 4.014664500590707,
+    "final_horizontal_error_m": 0.2705585688235483,
+    "final_vertical_error_m": -4.005537306422122,
+    "final_error_enu_m": [
+      -0.05303465561535603,
+      0.2653097519270773,
+      -4.005537306422122
+    ],
+    "final_error_percent_of_path": 0.9647157275416437
+  },
+  "diagnostics": {
+    "all_finite": true,
+    "max_quaternion_norm_deviation": 2.220446049250313e-16,
+    "dt_min_s": 0.009657845999999637,
+    "dt_max_s": 0.010342406999999554,
+    "non_increasing_timestamps": 0
+  },
+  "limitations": [
+    "single drive, close to straight, no stop: no statement on turns or stops",
+    "oracle initial state: not evidence of operational GNSS-denied navigation",
+    "initial biases set to zero and not estimated",
+    "inertial input and reference originate from the same OXTS unit",
+    "zero-order-hold integration has an error of first order in the step"
+  ],
+  "elapsed_s": 0.613
+}
