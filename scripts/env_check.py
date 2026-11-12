@@ -14,9 +14,19 @@ import platform
 import subprocess
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-REQUIRED = ["numpy", "scipy", "pandas", "matplotlib", "yaml", "hydra", "omegaconf", "pytest", "torch"]
+REQUIRED = [
+    "numpy",
+    "scipy",
+    "pandas",
+    "matplotlib",
+    "yaml",
+    "hydra",
+    "omegaconf",
+    "pytest",
+    "torch",
+]
 OPTIONAL = ["wandb"]
 
 
@@ -50,7 +60,9 @@ def total_ram_gb():
 
 def git_sha():
     try:
-        sha = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True, stderr=subprocess.DEVNULL).strip()
+        sha = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], text=True, stderr=subprocess.DEVNULL
+        ).strip()
         dirty = subprocess.check_output(["git", "status", "--porcelain"], text=True).strip() != ""
         return sha, dirty
     except Exception:
@@ -95,7 +107,7 @@ def main():
     sha, dirty = git_sha()
     record = {
         "machine": args.machine,
-        "checked_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "checked_utc": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "os": read_os_release(),
         "kernel": platform.release(),
         "python": sys.version.split()[0],
