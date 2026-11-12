@@ -59,3 +59,6 @@ the squared correction norm; the opposite sign must exceed ten times that bound.
 - Orientation corrections above the tested range (0.075 rad) are not covered.
 - The logarithm map is tested up to `pi - 1e-10` rad; at exactly `pi` the sign of the
   axis is not defined and only the rotation is compared.
+- The symmetric-positive-definite check of the Joseph update with ill-conditioned
+  covariances uses a tolerance of 1e-9 relative to the largest eigenvalue. It is a
+  numerical acceptance criterion in float64, not a proof of positive definiteness.
