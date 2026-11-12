@@ -21,7 +21,7 @@ from nkf.baselines.eskf import (
 )
 from nkf.baselines.strapdown import oracle_initial_state, run_strapdown
 from nkf.baselines.zupt_detector import detect_stationary
-from nkf.data.sequence import Observation
+from nkf.data.sequence import ImuSequence, Observation
 from nkf.data.synthetic import make_synthetic
 from nkf.filters import conventions as c
 
@@ -141,6 +141,34 @@ def test_zupt_holds_the_velocity_near_zero_during_the_stop(ugv):
     assert with_zupt["update_counts"][ZUPT] > 0
     assert speed(with_zupt) < 0.01
     assert speed(with_zupt) < speed(without)
+
+
+def test_estimate_up_to_k_does_not_depend_on_later_samples():
+    """Causality: cutting the sequence at k, or changing only later samples, leaves 0..k intact."""
+    seq = make_synthetic("ugv", seed=0, duration_s=55.0)
+    init = oracle_initial_state(seq.reference)
+    imu, t = seq.imu, seq.imu.t_s
+    k = 4600  # inside the stop, so NHC, ZUPT and position updates are all active
+    st = detect_stationary(imu.gyro_rad_s, imu.accel_m_s2, 200, 0.01, 0.05)
+    full = run_eskf(imu, init, P0, NOISE, seq.observations, NHC_STD, ZUPT_STD, stationary=st)
+
+    cut = ImuSequence(t[: k + 1], imu.gyro_rad_s[: k + 1], imu.accel_m_s2[: k + 1])
+    st_cut = detect_stationary(cut.gyro_rad_s, cut.accel_m_s2, 200, 0.01, 0.05)
+    assert np.array_equal(st_cut, st[: k + 1])
+    obs_cut = [o for o in seq.observations if o.t_s <= t[k]]
+    short = run_eskf(cut, init, P0, NOISE, obs_cut, NHC_STD, ZUPT_STD, stationary=st_cut)
+    for key in ("p", "v", "q", "p_diag"):
+        assert np.array_equal(full[key][: k + 1], short[key]), key
+
+    gyro = imu.gyro_rad_s.copy()
+    gyro[k + 1 :] += 5.0
+    altered = ImuSequence(t, gyro, imu.accel_m_s2)
+    st_alt = detect_stationary(altered.gyro_rad_s, altered.accel_m_s2, 200, 0.01, 0.05)
+    other = run_eskf(
+        altered, init, P0, NOISE, seq.observations, NHC_STD, ZUPT_STD, stationary=st_alt
+    )
+    for key in ("p", "v", "q", "p_diag"):
+        assert np.array_equal(full[key][: k + 1], other[key][: k + 1]), key
 
 
 def test_constraint_with_wrong_source_is_refused(ugv):
