@@ -1,0 +1,12 @@
+.git
+.vscode
+data/raw
+data/cache
+results/runs
+results/*.sqlite
+checkpoints
+wandb
+outputs
+**/__pycache__
+.pytest_cache
+.ruff_cache

@@ -1,0 +1,19 @@
+# CPU image for fast tests and CPU evaluation (W01-M-1).
+# Versions are unpinned until the W01 lockfile; GPU work stays on the host conda env.
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /workspace
+
+RUN pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+COPY pyproject.toml ./
+COPY nkf ./nkf
+RUN pip install -e ".[dev]" pandas matplotlib hydra-core omegaconf
+
+COPY . .
+
+CMD ["bash", "-c", "ruff check . && ruff format --check . && pytest -m fast -q"]
