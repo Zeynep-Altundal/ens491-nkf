@@ -1,5 +1,10 @@
 # Data manifest
 
+Machine-readable tables for the audits below are in `data/manifests/` (`sources.csv`,
+`fields.csv`, `timebase.csv`, `reference_quality.csv`). They hold metadata only. The
+text in this document is the audit record; the tables are checked against the loader and
+the allowlists by `tests/fast/test_data_manifests.py`.
+
 ## KITTI raw, drive 2011_09_30_drive_0016 (extract)
 
 Status: read-only audit of one drive. Not a split decision. Audited 12 November 2026.

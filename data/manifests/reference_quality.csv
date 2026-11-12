@@ -1,0 +1,8 @@
+dataset,sequence_id,indicator,min,max,unit,note
+kitti_raw_oxts_extract,2011_09_30_drive_0016,pos_accuracy,0.1,0.155,m,same OXTS unit as the inertial input
+kitti_raw_oxts_extract,2011_09_30_drive_0016,vel_accuracy,0.016,0.037,m/s,same OXTS unit as the inertial input
+kitti_raw_oxts_extract,2011_09_30_drive_0016,navstat,4,4,code,code meaning OPEN
+kitti_raw_oxts_extract,2011_09_30_drive_0016,numsats,5,11,count,
+kitti_raw_oxts_extract,2011_09_30_drive_0016,posmode,4,6,code,"values observed: 4, 5, 6; meaning OPEN"
+kitti_raw_oxts_extract,2011_09_30_drive_0016,velmode,0,6,code,"values observed: 0, 4, 5, 6; meaning OPEN"
+kitti_raw_oxts_extract,2011_09_30_drive_0016,orimode,0,6,code,"values observed: 0, 1, 6; meaning OPEN"

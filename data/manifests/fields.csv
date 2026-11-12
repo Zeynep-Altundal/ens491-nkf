@@ -1,0 +1,39 @@
+dataset,sequence_id,stream,column_index,field,unit,frame,role,note
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,1,lat,deg,WGS-84 geodetic,reference_only,
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,2,lon,deg,WGS-84 geodetic,reference_only,
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,3,alt,m,WGS-84 geodetic,reference_only,
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,4,roll,rad,OXTS attitude,reference_only,mapping to R_wb PROPOSED in interfaces section 11
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,5,pitch,rad,OXTS attitude,reference_only,
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,6,yaw,rad,OXTS attitude,reference_only,"0 = east, counter-clockwise"
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,7,vn,m/s,north,reference_only,
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,8,ve,m/s,east,reference_only,
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,9,vf,m/s,forward,reference_only,
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,10,vl,m/s,leftward,reference_only,
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,11,vu,m/s,up,reference_only,
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,12,ax,m/s^2,"vehicle (x front, y left, z top)",inertial_input,specific force
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,13,ay,m/s^2,"vehicle (x front, y left, z top)",inertial_input,specific force
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,14,az,m/s^2,"vehicle (x front, y left, z top)",inertial_input,specific force; dataformat.txt labels this field ay
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,15,af,m/s^2,earth-surface-parallel,rejected,depends on the OXTS attitude solution
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,16,al,m/s^2,earth-surface-parallel,rejected,depends on the OXTS attitude solution
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,17,au,m/s^2,earth-surface-parallel,rejected,depends on the OXTS attitude solution
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,18,wx,rad/s,"vehicle (x front, y left, z top)",inertial_input,
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,19,wy,rad/s,"vehicle (x front, y left, z top)",inertial_input,
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,20,wz,rad/s,"vehicle (x front, y left, z top)",inertial_input,
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,21,wf,rad/s,earth-surface-parallel,rejected,depends on the OXTS attitude solution
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,22,wl,rad/s,earth-surface-parallel,rejected,depends on the OXTS attitude solution
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,23,wu,rad/s,earth-surface-parallel,rejected,depends on the OXTS attitude solution
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,24,pos_accuracy,m,not applicable,reference_only,quality indicator; dataformat.txt describes it as a velocity accuracy
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,25,vel_accuracy,m/s,not applicable,reference_only,quality indicator
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,26,navstat,code,not applicable,reference_only,quality indicator; code meaning OPEN
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,27,numsats,count,not applicable,reference_only,quality indicator
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,28,posmode,code,not applicable,reference_only,quality indicator; code meaning OPEN
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,29,velmode,code,not applicable,reference_only,quality indicator; code meaning OPEN
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts/data,30,orimode,code,not applicable,reference_only,quality indicator; code meaning OPEN
+euroc_mav,V1_01_easy,imu0/data.csv,by name,"w_RS_S_{x,y,z}",rad/s,sensor frame S (body frame = inertial sensor frame),inertial_input,
+euroc_mav,V1_01_easy,imu0/data.csv,by name,"a_RS_S_{x,y,z}",m/s^2,sensor frame S (body frame = inertial sensor frame),inertial_input,specific force
+euroc_mav,V1_01_easy,state_groundtruth_estimate0/data.csv,by name,p_RS_R,m,"reference frame R (motion-capture frame, not ENU)",reference_only,
+euroc_mav,V1_01_easy,state_groundtruth_estimate0/data.csv,by name,q_RS,"[w, x, y, z]",body to reference,reference_only,scalar first
+euroc_mav,V1_01_easy,state_groundtruth_estimate0/data.csv,by name,v_RS_R,m/s,reference frame R,reference_only,
+euroc_mav,V1_01_easy,state_groundtruth_estimate0/data.csv,by name,b_w_RS_S,rad/s,sensor frame S (body frame = inertial sensor frame),reference_only,reference bias estimate; makes a run a diagnostic if used
+euroc_mav,V1_01_easy,state_groundtruth_estimate0/data.csv,by name,b_a_RS_S,m/s^2,sensor frame S (body frame = inertial sensor frame),reference_only,reference bias estimate; makes a run a diagnostic if used
+euroc_mav,V1_01_easy,vicon0/data.csv,by name,"p_RS_R, q_RS","m, [w, x, y, z]",motion-capture frame,not_used,raw pose with a non-identity extrinsic
