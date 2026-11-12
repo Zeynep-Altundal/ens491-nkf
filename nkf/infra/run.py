@@ -145,6 +145,7 @@ def run_synthetic(cfg):
                 "generated_available": len(seq.observations),
                 "hidden_in_outage": seq.hidden_observations,
                 "used_by_estimator": 0,
+                "provenance": seq.observations[0].provenance if seq.observations else None,
             },
             "outputs": files,
             "note": "Synthetic smoke run; no estimator performance claim.",

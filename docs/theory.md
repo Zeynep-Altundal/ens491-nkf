@@ -21,6 +21,7 @@ during an outage.
 | Symbol | Meaning | Unit |
 |---|---|---|
 | `w`, `b` | World frame (right-handed, z up) and body frame (inertial sensor frame) | - |
+| `veh` | Vehicle frame of the ground vehicle: x forward, y left, z up. `R_vb` maps `b` to `veh` | - |
 | `p`, `v` | Position and velocity of the body origin, expressed in `w` | m, m/s |
 | `q`, `R` | Orientation: Hamilton quaternion `[w, x, y, z]` and `R = R(q) = R_wb`, body to world | - |
 | `b_g`, `b_a` | Gyroscope and accelerometer bias, expressed in `b` | rad/s, m/s^2 |
@@ -194,16 +195,21 @@ are reported as simulated position updates.
 
 ### 7.2 Non-holonomic constraint (ground vehicle)
 
-A wheeled vehicle that does not slip moves along its forward axis. Its velocity
-expressed in the body frame, `v_b = R^T v`, has no lateral and no vertical component.
-With `S = [[0, 1, 0], [0, 0, 1]]` selecting those two components (body y to the left,
-z up):
+A wheeled vehicle that does not slip moves along its forward axis. The constraint is
+stated in the vehicle frame `veh` (x forward, y left, z up), which is not the same
+thing as the body frame `b`: `b` is the frame of the inertial sensor, and the two
+coincide only if the sensor is mounted aligned with the vehicle. `R_vb` is the
+constant rotation from `b` to `veh`.
+
+The velocity expressed in the vehicle frame, `v_veh = R_vb R^T v`, has no lateral and
+no vertical component. With `S = [[0, 1, 0], [0, 0, 1]]` selecting those two
+components:
 
 ```
-z = [0, 0]^T                         h(x) = S R^T v
+z = [0, 0]^T                         h(x) = S R_vb R^T v
 ```
 
-Jacobian. With the error definitions of section 4,
+Jacobian. With `v_b = R^T v` and the error definitions of section 4,
 
 ```
 v_b_true = Exp(-[dtheta]x) R_hat^T (v_hat + dv)
@@ -213,21 +219,37 @@ v_b_true = Exp(-[dtheta]x) R_hat^T (v_hat + dv)
 so
 
 ```
-H_NHC = S [ 0,  R_hat^T,  [v_b_hat]x,  0,  0 ]          y = -S v_b_hat
+H_NHC = S R_vb [ 0,  R_hat^T,  [v_b_hat]x,  0,  0 ]          y = -S R_vb v_b_hat
 ```
 
 The measurement covariance is `R_NHC = diag(s_lat^2, s_vert^2)` in (m/s)^2. Values:
 OPEN.
 
+Assumption used in the first implementation: `R_vb = I`, that is, the KITTI inertial
+unit is taken to be aligned with the vehicle. This is an unverified modelling
+assumption; the mounting rotation is OPEN in the contract.
+
+Lever arm. The constraint holds at a reference point of the vehicle (the centre of the
+rear axle), not at the sensor. Let `r` be the vector from that reference point to the
+origin of the inertial sensor, expressed in `b`, and let `w_hat = w_m - b_g_hat` be
+the angular rate of the body, also expressed in `b`. Rigid-body kinematics give
+`v_sensor = v_ref + R (w_hat x r)`, hence, in `b`,
+
+```
+v_ref_b = v_b - [w_hat]x r
+```
+
+and the constraint applies to `v_ref_b`. The lever arm of the KITTI unit is OPEN; the
+term is neglected in the first implementation, which is exact only when the vehicle
+does not rotate.
+
 Validity. The model assumes:
 
 - no side slip: violated in fast turns, on wet or loose ground, and during hard
   braking;
-- no vertical body velocity: violated by suspension motion and on rough ground;
-- the body frame is aligned with the vehicle and the velocity refers to a point on
-  the rear axle. The mounting rotation and the lever arm of the KITTI unit are OPEN
-  in the contract. With a lever arm `r` from that point to the sensor, the constraint
-  applies to `v_b - [w_hat]x r` instead of `v_b`; the term is neglected here.
+- no vertical velocity in the vehicle frame: violated by suspension motion and on
+  rough ground;
+- a known mounting rotation and lever arm (see above).
 
 When the constraint is applied while it does not hold, it pulls the estimate towards a
 wrong value with unwarranted confidence. This is the failure the project targets: a
@@ -262,20 +284,25 @@ small vertical velocity are a candidate, to be accepted only where an inertial-o
 detector is defensible. No model is written here; the decision is scheduled for W06,
 with an unconstrained aerial filter as the fallback.
 
-## 8. What can and cannot be observed
+## 8. Observability considerations (not formally verified)
 
-The statements below are standard results for inertial navigation and are expected to
-hold here. They have not been verified by an analysis in this project.
+No observability analysis has been performed in this project. The remarks below are
+qualitative and conditional.
 
-- With no observation, every error grows; position error grows fastest.
-- A position update makes position and velocity observable, and orientation and
-  biases gradually, depending on the motion.
-- The non-holonomic constraint observes two velocity components in the body frame. It
-  slows the drift during an outage but does not make absolute position or heading
-  observable.
-- A zero-velocity update observes velocity. At standstill, a horizontal accelerometer
-  bias and a tilt error produce the same measurement and cannot be separated; heading
-  remains unobservable.
+- During inertial-only propagation the navigation uncertainty generally increases,
+  because of sensor noise and bias uncertainty. Position and velocity errors may
+  accumulate over time; how fast depends on the initial uncertainty, the noise and the
+  motion.
+- Position updates and motion constraints can improve the observability of some
+  error-state components. Which ones, and how well, depends on the trajectory, the
+  available measurements and the excitation of the system.
+- That a measurement is directly sensitive to some velocity components (the lateral
+  and vertical ones for the non-holonomic constraint, all three for the zero-velocity
+  update) does not by itself show that those components, or any other state, are
+  observable over a run.
+- At standstill, a horizontal accelerometer bias and a tilt error have the same
+  first-order effect on a zero-velocity measurement. Separating them needs additional
+  information or motion.
 
 ## 9. Verification status
 
@@ -286,15 +313,16 @@ hold here. They have not been verified by an analysis in this project.
 | Discretisation and linearisation error orders | `docs/notes/contract_test_tolerances.md` | Automated |
 | Joseph update, injection, reset (section 6) | Independent SO(3) reference, ill-conditioned covariances | Automated |
 | Conventions on real data | KITTI strapdown run; EuRoC pre-audit | One drive, one flight |
-| `H_NHC` (section 7.2) | Finite differences, one state, largest difference 9e-10; a sign change in the orientation block is detected | Checked once by hand; no automated test, no implementation |
-| `H_ZUPT` (section 7.3) | Linear in the state | No implementation |
+| `H_NHC` (section 7.2) | `tests/fast/test_constraints_ugv.py`: finite differences at six states with non-trivial orientation and velocity, with and without a mounting rotation; a sign change in the orientation block is detected | Automated; measurement model only |
+| `H_ZUPT` (section 7.3) | `tests/fast/test_constraints_ugv.py` | Automated; measurement model only |
 | Stationary detector | - | Not designed |
+| Lever-arm term (section 7.2) | - | Not implemented |
 | Filter with constraints on data | - | Not run |
 
 ## 10. Open items
 
 - Values of `R_NHC`, `R_ZUPT`, the detector thresholds and the KITTI noise densities.
-- Mounting rotation and lever arm of the KITTI inertial unit.
+- Mounting rotation `R_vb` and lever arm `r` of the KITTI inertial unit.
 - Whether the KITTI inertial channels are raw or corrected by the unit.
 - Integration scheme: the zero-order hold is the frozen baseline; a midpoint scheme
   needs its own decision record and a paired comparison.
