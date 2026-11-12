@@ -1,0 +1,6 @@
+dataset,sequence_id,stream,samples,duration_s,dt_mean_s,dt_std_s,dt_min_s,dt_max_s,non_increasing,gaps,gap_threshold_s
+kitti_raw_oxts_extract,2011_09_30_drive_0016,oxts,2967,29.659,0.01,8.1e-05,0.009658,0.010342,0,0,0.015
+euroc_mav,V1_01_easy,imu0,29120,145.595,0.005,1e-07,0.0049999,0.0050002,0,0,NOT RECORDED
+euroc_mav,V1_01_easy,state_groundtruth_estimate0,28712,143.555,0.005,2e-07,0.0049997,0.0050002,0,0,NOT RECORDED
+euroc_mav,V1_02_medium,imu0,17100,85.495,0.005,1e-07,0.0049999,0.0050002,0,0,NOT RECORDED
+euroc_mav,V1_02_medium,state_groundtruth_estimate0,16702,83.505,0.005,2e-07,0.0049997,0.0050002,0,0,NOT RECORDED
