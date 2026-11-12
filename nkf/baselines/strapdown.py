@@ -68,12 +68,32 @@ def drift_metrics(t_s, p_est, p_ref):
     """Position error against the reference. Descriptive values only."""
     err = p_est - p_ref
     norm = np.linalg.norm(err, axis=1)
+    horizontal = np.linalg.norm(err[:, :2], axis=1)
     path = float(np.sum(np.linalg.norm(np.diff(p_ref, axis=0), axis=1)))
     return {
         "duration_s": float(t_s[-1] - t_s[0]),
+        "samples": int(len(t_s)),
         "reference_path_length_m": path,
-        "final_position_error_m": float(norm[-1]),
-        "max_position_error_m": float(norm.max()),
+        "initial_position_error_m": float(norm[0]),
+        "rmse_position_3d_m": float(np.sqrt(np.mean(norm**2))),
+        "final_position_error_3d_m": float(norm[-1]),
+        "max_position_error_3d_m": float(norm.max()),
+        "final_horizontal_error_m": float(horizontal[-1]),
+        "final_vertical_error_m": float(err[-1, 2]),
         "final_error_enu_m": [float(x) for x in err[-1]],
         "final_error_percent_of_path": float(100.0 * norm[-1] / path) if path > 0 else None,
+    }
+
+
+def state_diagnostics(t_s, p_est, v_est, q_est):
+    """Numerical health of an estimated trajectory."""
+    dt = np.diff(t_s)
+    return {
+        "all_finite": bool(
+            np.all(np.isfinite(p_est)) and np.all(np.isfinite(v_est)) and np.all(np.isfinite(q_est))
+        ),
+        "max_quaternion_norm_deviation": float(np.max(np.abs(np.linalg.norm(q_est, axis=1) - 1.0))),
+        "dt_min_s": float(dt.min()),
+        "dt_max_s": float(dt.max()),
+        "non_increasing_timestamps": int(np.sum(dt <= 0.0)),
     }

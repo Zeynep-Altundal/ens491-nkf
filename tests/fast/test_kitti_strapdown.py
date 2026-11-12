@@ -10,6 +10,7 @@ from nkf.baselines.strapdown import (
     drift_metrics,
     oracle_initial_state,
     run_strapdown,
+    state_diagnostics,
 )
 from nkf.data import kitti
 from nkf.data.sequence import ImuSequence, Reference
@@ -109,12 +110,25 @@ def test_strapdown_tracks_a_circle_and_error_is_first_order_in_dt():
         imu, ref = _circle(rate)
         p, v, q = run_strapdown(imu, oracle_initial_state(ref))
         metrics = drift_metrics(imu.t_s, p, ref.p_w)
-        errors.append(metrics["final_position_error_m"])
+        errors.append(metrics["final_position_error_3d_m"])
         assert math.isclose(metrics["reference_path_length_m"], 300.0, rel_tol=1e-3)
         assert np.allclose(np.linalg.norm(q, axis=1), 1.0, atol=1e-12)
         assert np.allclose(p[:, 2], 0.0, atol=1e-9) and np.allclose(v[:, 2], 0.0, atol=1e-9)
     assert errors[0] < 0.5
     assert 1.8 < errors[0] / errors[1] < 2.2
+
+
+def test_metrics_and_diagnostics_fields():
+    imu, ref = _circle(100.0, duration_s=5.0)
+    p, v, q = run_strapdown(imu, oracle_initial_state(ref))
+    metrics = drift_metrics(imu.t_s, p, ref.p_w)
+    assert metrics["initial_position_error_m"] == 0.0
+    assert metrics["samples"] == len(imu.t_s)
+    assert 0.0 < metrics["rmse_position_3d_m"] <= metrics["max_position_error_3d_m"]
+    assert math.isclose(metrics["final_vertical_error_m"], 0.0, abs_tol=1e-9)
+    diagnostics = state_diagnostics(imu.t_s, p, v, q)
+    assert diagnostics["all_finite"] and diagnostics["non_increasing_timestamps"] == 0
+    assert diagnostics["max_quaternion_norm_deviation"] < 1e-12
 
 
 def test_strapdown_stationary_stays_at_rest():
