@@ -1,0 +1,27 @@
+# W01 synthetic pipeline smoke. Merged on top of configs/base.yaml; --platform/--seed override.
+protocol_version: "w01-v0"
+method: "strapdown_dummy"
+platform: "ugv"
+split_id: "synthetic"
+owner: "melike"
+issue: "W01-M-2"
+purpose: "W01 synthetic pipeline smoke; no performance claim"
+
+data:
+  source: "synthetic"
+  ugv:
+    duration_s: 120.0
+    imu_hz: 100.0
+    outage_s: [60.0, 90.0]
+  uav:
+    duration_s: 60.0
+    imu_hz: 200.0
+    outage_s: [30.0, 40.0]
+  gyro_noise_std: 0.002
+  accel_noise_std: 0.02
+  gyro_bias_std: 0.001
+  accel_bias_std: 0.02
+  obs_pos_std_m: 0.5
+
+db_path: "results/results.sqlite"
+registry: "results/registry.csv"
