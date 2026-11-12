@@ -82,3 +82,31 @@ zero-velocity updates or cornering.
   from the same OXTS unit; this coupling limits independent ground-truth claims.
 - OPEN: lever arm and mounting rotation between the OXTS unit and the vehicle frame.
 - NOT RECORDED: EuRoC audit; any second KITTI drive.
+
+### Numerical check of the reference orientation (12 November 2026)
+
+Body measurements rotated by roll and pitch are compared with the levelled-frame
+fields over all 2967 samples. The levelled-frame fields are used for this check only;
+they remain rejected as inputs.
+
+| Variant | Specific force residual, rms / max [m/s^2] | Angular rate residual, rms / max [rad/s] |
+|---|---|---|
+| `Ry(pitch) Rx(roll)` | 0.01233 / 0.05219 | 0.00002 / 0.00015 |
+| `Rx(roll) Ry(pitch)` | 0.01235 / 0.05227 | 0.00002 / 0.00016 |
+| `Ry(-pitch) Rx(roll)` | 0.25051 / 0.34253 | 0.00048 / 0.00264 |
+| `Ry(pitch) Rx(-roll)` | 0.85301 / 1.52638 | 0.00128 / 0.00550 |
+
+| Yaw variant, `[ve, vn]` against `Rz(yaw) [vf, vl]` | Residual, rms / max [m/s] |
+|---|---|
+| `Rz(+yaw)` | 0.07753 / 0.23016 |
+| `Rz(-yaw)` | 27.92687 / 31.21452 |
+
+Findings:
+
+- VERIFIED: sign and axis of roll and pitch; sign of yaw.
+- NOT OBSERVABLE on this drive: the order of the roll and pitch rotations. Mean roll
+  0.043 rad and mean pitch 0.013 rad make the two orders differ by less than the
+  residual floor.
+- OPEN: the specific-force residual (0.012 m/s^2 rms) and the velocity residual
+  (0.078 m/s rms) are not explained by the rotation model. The angular-rate residual
+  is at numerical level.
