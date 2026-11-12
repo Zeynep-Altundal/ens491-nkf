@@ -1,7 +1,8 @@
 # Interface and convention contract
 
-Status: DRAFT. Not frozen. No implementation may rely on this document until the
-freeze is recorded in an ADR. After the freeze, any change requires an ADR, a
+Status: FROZEN for the ground-vehicle track (KITTI) by ADR-0001, 12 November 2026.
+Statements specific to the aerial track (EuRoC) remain PROPOSED until the EuRoC
+pre-audit is recorded. Any change to a frozen statement requires a new ADR, a
 migration note and a contract test.
 
 Evidence base: KITTI OXTS audit in `docs/data_manifest.md` (commit `32eadaa`).

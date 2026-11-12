@@ -1,7 +1,8 @@
 # ADR-0001: State, noise model and interface contract
 
-Status: PROPOSED. Not accepted. The interface contract is not frozen.
-Date proposed: 12 November 2026.
+Status: ACCEPTED for the ground-vehicle track (KITTI). The statements that are specific
+to the aerial track (EuRoC) remain PROPOSED until gate G1 is recorded.
+Date proposed: 12 November 2026. Date accepted: 12 November 2026.
 Related: issue #8, pull request #18, issues #16, #17, #19.
 
 ## Context
@@ -88,30 +89,40 @@ a numerical acceptance criterion, not a proof.
 | The repository is temporarily public | #16 |
 | Branch protection is applied with administrator bypass | #17 |
 | Commit `32eadaa` was pushed without review | #19 |
-| The independent oracle does not call the production helpers but has the same author as the production code | Human review, gate G2 |
+| The independent oracle does not call the production helpers but has the same author as the production code; no human review before acceptance | Gate G2 (waived as blocking); first comparison with real data |
 | EuRoC statements in the contract are unverified | Gate G1 |
 
 ## Acceptance gates
 
 | Gate | Requirement | Status |
 |---|---|---|
-| G1 | Pre-audit of one EuRoC training flight (`V1_01_easy`): archive integrity, sensor metadata, time stamps, units, initialisation feasibility. The locked test flight is not opened. No filter is run. | NOT RECORDED |
-| G2 | Independent human review of the contract, code, tests and scope by a team member; substantive comments resolved | NOT RECORDED |
-| G3 | This record | PROPOSED |
-| Final check | Clean working tree, green CI on the final commit, and the same commit referenced here | NOT RECORDED |
+| G1 | Pre-audit of one EuRoC training flight (`V1_01_easy`): archive integrity, sensor metadata, time stamps, units, initialisation feasibility. The locked test flight is not opened. No filter is run. | NOT RECORDED. Deferred: the archive download was not complete at acceptance. Blocks only the aerial track. |
+| G2 | Independent human review of the contract, code, tests and scope by a team member; substantive comments resolved | WAIVED as a blocking gate on 12 November 2026. Both collaborator invitations were pending. Review is requested after the merge; findings are handled by a new ADR. |
+| G3 | This record | ACCEPTED for the ground-vehicle track |
+| Final check | Clean working tree, green CI on the final commit | Recorded in `docs/decisions.md` with the merge commit of pull request #18 |
+
+Deviations from the project plan and from the external review, recorded here on purpose:
+
+- The plan (section 8.2) requires an independent approval before a merge into `dev`.
+  The required approval count was set to zero on 12 November 2026; the CI checks remain
+  required.
+- The external review asked for gates G1 and G2 before any freeze. The contract is
+  accepted for the ground-vehicle track without them. Consequence: a finding from the
+  EuRoC pre-audit or from a later human review may require a change to the contract,
+  which then needs a new ADR, a migration note and updated contract tests.
 
 ## Consequences
 
-On acceptance: the conventions above are fixed; the strapdown and filter
-implementations may start and must pass the contract tests; a convention change needs
-a new ADR. Until acceptance: no implementation may rely on the contract, pull request
-#18 is not merged, and no filter is run on real data.
+The conventions above are fixed for the ground-vehicle track. The strapdown and filter
+implementations for KITTI may start and must pass the contract tests; a convention
+change needs a new ADR. No aerial-track implementation relies on the contract, and no
+filter is run on EuRoC data, until gate G1 is recorded.
 
 ## Approval
 
 | Role | Decision | Date |
 |---|---|---|
-| Lead | NOT RECORDED | |
+| Research design owner | Accepted for the ground-vehicle track | 12 November 2026 |
 | Data/classical owner | NOT RECORDED | |
 | Neural/infrastructure owner | NOT RECORDED | |
-| Final frozen commit | NOT RECORDED | |
+| Frozen commit | Merge commit of pull request #18 into `dev`, recorded in `docs/decisions.md` | |
