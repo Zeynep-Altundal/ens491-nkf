@@ -21,6 +21,7 @@ MODULES = [
     "nkf.filters.torch_eskf",
     "nkf.filters.noise_param",
     "nkf.filters.api",
+    "nkf.filters.conventions",
     "nkf.models.uncertainty_net",
     "nkf.models.gain_net",
     "nkf.models.features",
