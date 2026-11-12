@@ -1,9 +1,20 @@
 # PyTorch and CUDA pins are added after the W01 compatibility test on all machines.
+# torch is installed separately:
+#   GPU: pip install torch
+#   CPU: pip install torch --index-url https://download.pytorch.org/whl/cpu
 name: nkf
 channels:
   - conda-forge
 dependencies:
   - python=3.11
+  - numpy
+  - scipy
+  - pandas
+  - matplotlib
+  - pyyaml
+  - hydra-core
+  - omegaconf
   - pip
   - pip:
       - -e .[dev]
+      - wandb

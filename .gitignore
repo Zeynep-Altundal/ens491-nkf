@@ -225,3 +225,6 @@ data/cache/
 results/runs/
 results/*.sqlite
 checkpoints/
+wandb/
+outputs/
+.vscode/
