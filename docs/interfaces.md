@@ -17,9 +17,9 @@ The EuRoC audit is NOT RECORDED; every UAV-specific statement below is PROPOSED.
 | Body, UAV (EuRoC) | IMU sensor frame of the dataset. Not assumed to be front-left-up. | PROPOSED; audit NOT RECORDED |
 
 Geodetic reference positions are converted to `w` by WGS-84 geodetic to ECEF to ENU
-about the first valid reference sample. Status: PROPOSED. The KITTI development kit
-uses a scaled Mercator projection instead; the difference over the sequence length is
-to be quantified before the freeze.
+about the first valid reference sample. Status: PROPOSED. pykitti uses a scaled
+Mercator projection instead; the difference over the sequence length is to be
+quantified before the first baseline evaluation.
 
 ## 2. Nominal state
 
@@ -53,7 +53,8 @@ b_a_dot = n_ba
 ```
 
 `[u]x` is the skew-symmetric matrix of `u`. Earth rotation and Coriolis terms are
-neglected. This is a stated modelling assumption and a limitation, not a finding.
+neglected. This is a stated modelling assumption for short-duration local navigation
+and a limitation, not a finding.
 
 ## 4. Discrete nominal propagation (reference implementation)
 
@@ -73,6 +74,8 @@ after the freeze.
 
 ## 5. Error state
 
+### 5.1 Definition
+
 Order and indices: `dx = [dp (0:3), dv (3:6), dtheta (6:9), db_g (9:12), db_a (12:15)]`.
 The covariance `P` is [15, 15] in this order.
 
@@ -84,23 +87,80 @@ b_g_true = b_g_hat + db_g             bias error = true minus nominal
 b_a_true = b_a_hat + db_a
 ```
 
-First-order error dynamics, consistent with the definitions above:
+### 5.2 Error dynamics
+
+With `f_hat = f_m - b_a_hat` and `w_hat = w_m - b_g_hat`, to first order:
 
 ```
 dp_dot     = dv
-dv_dot     = -R_hat [f_m - b_a_hat]x dtheta - R_hat db_a - R_hat n_a
-dtheta_dot = -[w_m - b_g_hat]x dtheta - db_g - n_g
+dv_dot     = -R_hat [f_hat]x dtheta - R_hat db_a - R_hat n_a
+dtheta_dot = -[w_hat]x dtheta - db_g - n_g
 db_g_dot   = n_bg
 db_a_dot   = n_ba
 ```
 
-Continuous noise: `n_g` (rad/s/sqrt(Hz)), `n_a` (m/s^2/sqrt(Hz)), `n_bg`
-(rad/s^2/sqrt(Hz)), `n_ba` (m/s^3/sqrt(Hz)). Numerical values: OPEN.
+### 5.3 Jacobians
 
-Covariance propagation: `P <- Phi P Phi^T + Q_d`, with `Phi = I + F dt_k` and
-`Q_d = G Q_c G^T dt_k` as the reference discretisation, where `F` and `G` are the
-Jacobians of the dynamics above. A higher-order discretisation is a configuration
-field.
+`dx_dot = F dx + G n`, with the noise vector in the fixed order
+`n = [n_g (0:3), n_a (3:6), n_bg (6:9), n_ba (9:12)]`.
+
+`F` is [15, 15]. Rows and columns follow the error-state order. `0` and `I` are 3x3.
+
+```
+         dp    dv    dtheta            db_g   db_a
+dp     [ 0     I     0                 0      0      ]
+dv     [ 0     0    -R_hat [f_hat]x    0     -R_hat  ]
+dtheta [ 0     0    -[w_hat]x         -I      0      ]
+db_g   [ 0     0     0                 0      0      ]
+db_a   [ 0     0     0                 0      0      ]
+```
+
+`G` is [15, 12]. Columns follow the noise-vector order.
+
+```
+         n_g   n_a      n_bg   n_ba
+dp     [ 0     0        0      0  ]
+dv     [ 0    -R_hat    0      0  ]
+dtheta [-I     0        0      0  ]
+db_g   [ 0     0        I      0  ]
+db_a   [ 0     0        0      I  ]
+```
+
+### 5.4 Noise convention
+
+`n` is zero-mean white noise with `E[n(t) n(s)^T] = Q_c delta(t - s)` and
+
+```
+Q_c = blockdiag(sigma_g^2 I3, sigma_a^2 I3, sigma_bg^2 I3, sigma_ba^2 I3)     [12, 12]
+```
+
+Configuration stores noise densities `sigma` (square roots of the power spectral
+densities), never per-sample standard deviations and never the densities squared.
+
+| Config field | Symbol | Meaning | Unit of `sigma` | Unit of the `Q_c` entry |
+|---|---|---|---|---|
+| `noise.gyro_density` | `sigma_g` | Gyroscope white noise | rad/s/sqrt(Hz) | (rad/s)^2/Hz |
+| `noise.accel_density` | `sigma_a` | Accelerometer white noise | m/s^2/sqrt(Hz) | (m/s^2)^2/Hz |
+| `noise.gyro_bias_rw` | `sigma_bg` | Gyroscope bias random walk | rad/s^2/sqrt(Hz) | (rad/s^2)^2/Hz |
+| `noise.accel_bias_rw` | `sigma_ba` | Accelerometer bias random walk | m/s^3/sqrt(Hz) | (m/s^3)^2/Hz |
+
+Each density is one scalar per sensor (isotropic) in this version. Validation: finite
+and strictly positive. Numerical values per platform: OPEN; selected on training and
+validation data only.
+
+### 5.5 Covariance propagation
+
+```
+Phi = I + F dt_k
+Q_d = G Q_c G^T dt_k
+P  <- Phi P Phi^T + Q_d
+```
+
+This first-order discretisation is the reference. Under it, the white-noise terms
+correspond to a per-sample standard deviation `sigma / sqrt(dt_k)` and the bias
+random-walk terms to a per-step increment standard deviation `sigma_b sqrt(dt_k)`.
+`P` is symmetrised after each propagation. A higher-order discretisation is a
+configuration field.
 
 ## 6. Measurement update
 
@@ -119,6 +179,10 @@ in the theory note, not in this contract.
 
 ## 7. Injection and reset
 
+Order of operations for every accepted observation: (1) Joseph update of `P` and
+computation of `dx_hat`; (2) injection; (3) covariance reset. Steps 2 and 3 use the
+`dx_hat` of step 1.
+
 ```
 p_hat   <- p_hat + dp_hat
 v_hat   <- v_hat + dv_hat
@@ -131,7 +195,9 @@ dx <- 0
 P  <- G_r P G_r^T,   G_r = blockdiag(I6, I3 - 0.5 [dtheta_hat]x, I6)
 ```
 
-`q{dtheta}` is the unit quaternion of the rotation vector `dtheta`.
+`q{dtheta}` is the unit quaternion of the rotation vector `dtheta`. `dtheta_hat` in
+`G_r` is the correction that was injected in step 2. `G_r` is a first-order
+approximation in `dtheta_hat`.
 
 ## 8. Data objects
 
@@ -161,27 +227,62 @@ Held in a separate object that is never passed to the filter or the network.
 | `valid` | [M] bool | - |
 | `quality` | dataset-specific | - |
 
-### 8.3 Observation stream
+### 8.3 Observation
 
-Position observations made available to the filter outside outages, with an
-availability mask. For the UAV track they are synthesised from the reference and are
-reported as simulated absolute-position updates, never as GNSS.
+One observation is one record with all of the following fields.
 
-### 8.4 Sequence metadata
+| Field | Type | Meaning |
+|---|---|---|
+| `t_s` | float64 | Time of validity, in the time base of the sequence |
+| `kind` | enum | `position` or `constraint:<name>` |
+| `z` | [m] float64 | Measured value |
+| `unit` | str | Unit of `z` |
+| `frame` | str | Frame in which `z` is expressed (`w` or `b`) |
+| `R_meas` | [m, m] float64 | Measurement covariance; symmetric positive definite |
+| `source` | enum | `simulated_from_reference`, `dataset_sensor` or `pseudo_measurement` |
+| `valid` | bool | False if the record must not be used |
+| `provenance` | record | Generator name, configuration hash and random seed |
+
+Rules:
+
+- The filter receives `observations`: the list of valid observations whose `t_s`
+  lies in `(t_k, t_{k+1}]` and that are available under the outage mask. An empty
+  list means no update.
+- An observation is applied after the state has been propagated to `t_{k+1}`. The
+  offset `t_{k+1} - t_s` is recorded in diagnostics and is at most one inertial
+  sample period.
+- A simulated position update is produced only by a declared generator that reads
+  the reference and adds seeded zero-mean noise. Its `source` is
+  `simulated_from_reference`, its `R_meas` is the covariance of the generator noise,
+  and it is unavailable during an outage. For the UAV track it is reported as a
+  simulated absolute-position update, never as GNSS.
+- A pseudo-measurement (`pseudo_measurement`) carries no value derived from the
+  reference.
+- The generator is the only path by which reference data can reach the filter after
+  initialisation.
+
+### 8.4 Initial state
+
+Initialisation is not an observation. It is a separate record used once at `t_0`:
+`p`, `v`, `q`, `b_g`, `b_a`, `P_0`, and `init` with the value `oracle` or
+`operational`. The record and its `init` label are stored in the run manifest.
+
+### 8.5 Sequence metadata
 
 `id`, `platform` (`ugv` or `uav`), `calibration`, `source_hash` (SHA-256),
 `split_id` (`train`, `validation`, `test_locked`).
 
-### 8.5 Filter
+### 8.6 Filter
 
 ```
-Filter.step(gyro_rad_s, accel_m_s2, dt_s, observations_available_now)
+Filter.init(initial_state)
+Filter.step(gyro_rad_s, accel_m_s2, dt_s, observations)
     -> state (p, v, q, b_g, b_a), covariance [15, 15], diagnostics
 ```
 
-The signature has no reference argument.
+Neither call has a reference argument.
 
-### 8.6 EvaluationResult
+### 8.7 EvaluationResult
 
 `run_id, sequence_id, outage_id, metric, value, unit, reference_dof, status,
 failure_reason, provenance`
@@ -190,11 +291,20 @@ failure_reason, provenance`
 
 - `t_s` is float64 seconds from the first sample of the sequence.
 - `dt_k` is the measured timestamp difference. A constant rate is never assumed.
-- A non-increasing timestamp rejects the sequence. It is not repaired.
-- A non-finite inertial sample is rejected and counted. It is never interpolated
-  silently.
-- A gap `dt_k > dt_max` is flagged and counted in diagnostics. `dt_max` and the
-  handling of outage windows that contain a gap: OPEN.
+- `dt_nominal` is the median of `dt_k` over the sequence.
+- `dt_max = dt_max_factor x dt_nominal`. `dt_max_factor` is a configuration field,
+  default 5, valid range (1, 20]. Default value: PROPOSED.
+
+| Condition | Action |
+|---|---|
+| `dt_k <= 0` | The sequence is rejected. It is not repaired. |
+| `0 < dt_k <= dt_max` | Propagation with the measured `dt_k`. |
+| `dt_k > dt_max` | Gap. The filter does not integrate across it. The sequence is split into segments at the gap; each segment is an independent run with its own initial state (section 10). No interpolation. |
+| Non-finite inertial sample | Treated as a gap at that sample; counted. Never interpolated silently. |
+
+Every gap is counted in diagnostics and listed in the run manifest. An outage window
+must lie entirely inside one segment; otherwise it is reported as N/A with the reason
+`timestamp_gap`.
 
 Audit reference for KITTI drive `2011_09_30_drive_0016`: 2967 samples, `dt` 9.658 to
 10.342 ms, no non-increasing timestamp, no gap above 15 ms.
@@ -202,16 +312,37 @@ Audit reference for KITTI drive `2011_09_30_drive_0016`: 2967 samples, `dt` 9.65
 ## 10. Initialisation and leakage safeguards
 
 - Oracle-initialised baseline: `p`, `v`, `q` at `t_0` are taken from the reference.
-  After `t_0` the reference changes the state only through the declared observation
-  stream. Every result produced this way carries the label `init: oracle`.
+  After `t_0` the reference reaches the filter only through simulated position
+  updates (section 8.3). Every result produced this way carries the label
+  `init: oracle`.
 - An oracle-initialised result is not evidence of operational GNSS-denied navigation.
 - Initial biases are set to zero. This is an initial estimate, not a statement that
   the true biases are zero.
-- Initial covariance `P_0`: OPEN.
 - Operational initialisation (no reference at `t_0`) is outside this version of the
   contract.
-- The allowlist of section 8.1 is enforced in the loader and covered by a contract
-  test (planned: `tests/fast/test_no_gt_leakage.py`).
+- The allowlist of section 8.1 is enforced in the loader.
+
+### 10.1 Initial covariance
+
+`P_0` is diagonal, in the error-state order of section 5.1:
+
+```
+P_0 = blockdiag(s_p^2 I3, s_v^2 I3, s_theta^2 I3, s_bg^2 I3, s_ba^2 I3)
+```
+
+| Config field | Symbol | Unit | Valid range |
+|---|---|---|---|
+| `p0.pos_std_m` | `s_p` | m | (0, 100] |
+| `p0.vel_std_m_s` | `s_v` | m/s | (0, 10] |
+| `p0.att_std_rad` | `s_theta` | rad | (0, pi] |
+| `p0.gyro_bias_std_rad_s` | `s_bg` | rad/s | (0, 0.1] |
+| `p0.accel_bias_std_m_s2` | `s_ba` | m/s^2 | (0, 1] |
+
+Each field is a scalar or a length-3 vector. Validation: finite, strictly positive,
+inside the valid range; the assembled `P_0` is symmetric positive definite. A value
+outside the range is a configuration error, not a warning. The ranges are sanity
+bounds (PROPOSED), not tuned values. Numerical values per dataset: OPEN; selected on
+training and validation data only and recorded in the run manifest.
 
 ## 11. Reference orientation, KITTI
 
@@ -227,6 +358,7 @@ Numerical check on drive `2011_09_30_drive_0016`, all 2967 samples
   27.9 m/s).
 - NOT OBSERVABLE on this drive: the order of the roll and pitch rotations.
   The order `Rz Ry Rx` is documented from the pykitti source (commit `de33723`).
+  pykitti is not claimed to be identical to the official development kit.
 - OPEN: unexplained residuals of the levelled-frame comparison.
 
 The comparison of `yaw` with `atan2(vn, ve)` checks course over ground, not heading,
@@ -242,8 +374,26 @@ and is not a verification.
 | Geodetic to ENU method (ECEF-ENU against scaled Mercator) | PROPOSED |
 | EuRoC body frame, reference frame and time alignment | OPEN |
 | Value of `g_w` magnitude | PROPOSED 9.81 |
-| Noise densities and `P_0` | OPEN |
-| `dt_max` and gap handling in outage windows | OPEN |
+| Noise density values per platform | OPEN |
+| `P_0` values per dataset | OPEN |
+| `dt_max_factor` default (5) and `P_0` sanity bounds | PROPOSED |
 | Order of roll and pitch rotations in the KITTI reference orientation | Documented from source: pykitti `pose_from_oxts_packet` computes `R = Rz Ry Rx` (`pykitti/utils.py`, commit `de33723`). Not observable numerically on the audited drive. The official development kit file was not inspected. |
 | Residuals of the levelled-frame check (0.012 m/s^2, 0.078 m/s rms) | OPEN |
 | Second KITTI drive with turns and stops | OPEN; does not block the freeze |
+
+## 13. Contract tests
+
+Status: PLANNED. The freeze requires these tests to exist and pass.
+
+| Test | Checks |
+|---|---|
+| Quaternion convention | Hamilton product, `[w, x, y, z]` order, `R(q)` maps `b` to `w` |
+| Exponential map | `Exp` and its inverse agree; small-angle behaviour |
+| Error definition | `R_true = R_hat Exp([dtheta]x)` recovered by injection on the right |
+| Jacobians | `F` and `G` of section 5.3 against finite differences of the nominal model |
+| Reset | `G_r` against a finite-difference reset; `P` stays symmetric positive definite |
+| Joseph update | `P` symmetric positive definite after update |
+| Noise convention | `Q_d` units and scaling with `dt_k` |
+| Time validation | Rejection, gap splitting and N/A outage windows of section 9 |
+| Initial covariance | Range and positive-definiteness validation of section 10.1 |
+| Leakage | Only allowlisted fields reach the filter; reference object is never passed |
