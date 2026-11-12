@@ -226,6 +226,7 @@ Numerical check on drive `2011_09_30_drive_0016`, all 2967 samples
   and 0.85 m/s^2 for the sign-flipped variants); sign of yaw (0.078 m/s rms against
   27.9 m/s).
 - NOT OBSERVABLE on this drive: the order of the roll and pitch rotations.
+  The order `Rz Ry Rx` is documented from the pykitti source (commit `de33723`).
 - OPEN: unexplained residuals of the levelled-frame comparison.
 
 The comparison of `yaw` with `atan2(vn, ve)` checks course over ground, not heading,
@@ -243,6 +244,6 @@ and is not a verification.
 | Value of `g_w` magnitude | PROPOSED 9.81 |
 | Noise densities and `P_0` | OPEN |
 | `dt_max` and gap handling in outage windows | OPEN |
-| Order of roll and pitch rotations in the KITTI reference orientation | OPEN: not observable on the audited drive; to be confirmed from the dataset development kit and a drive with larger attitude angles |
+| Order of roll and pitch rotations in the KITTI reference orientation | Documented from source: pykitti `pose_from_oxts_packet` computes `R = Rz Ry Rx` (`pykitti/utils.py`, commit `de33723`). Not observable numerically on the audited drive. The official development kit file was not inspected. |
 | Residuals of the levelled-frame check (0.012 m/s^2, 0.078 m/s rms) | OPEN |
 | Second KITTI drive with turns and stops | OPEN; does not block the freeze |
