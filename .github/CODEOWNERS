@@ -1,9 +1,5 @@
-# Default owner. Replace the commented placeholders with real GitHub handles
-# once all collaborators have accepted their invitations, then uncomment.
+# One pattern per line. Handles of other team members are added after they join.
 * @Zeynep-Altundal
-
-# /nkf/data/ /nkf/baselines/ /nkf/eval/ /nkf/robustness/ /data/        @DATA_OWNER
-# /nkf/filters/ /nkf/models/ /nkf/train/ /nkf/infra/ /nkf/figures/     @NEURAL_OWNER
-# /scripts/ /.github/workflows/                                        @NEURAL_OWNER
-# /configs/splits/ /configs/outage/ /configs/injectors/                @DATA_OWNER
-/docs/ /paper/ /configs/experiments/                                   @Zeynep-Altundal
+/docs/ @Zeynep-Altundal
+/paper/ @Zeynep-Altundal
+/configs/experiments/ @Zeynep-Altundal
