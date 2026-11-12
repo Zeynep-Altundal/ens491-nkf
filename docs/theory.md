@@ -315,9 +315,9 @@ qualitative and conditional.
 | Conventions on real data | KITTI strapdown run; EuRoC pre-audit | One drive, one flight |
 | `H_NHC` (section 7.2) | `tests/fast/test_constraints_ugv.py`: finite differences at six states with non-trivial orientation and velocity, with and without a mounting rotation; a sign change in the orientation block is detected | Automated; measurement model only |
 | `H_ZUPT` (section 7.3) | `tests/fast/test_constraints_ugv.py` | Automated; measurement model only |
-| Stationary detector | - | Not designed |
+| Stationary detector | `tests/fast/test_eskf.py` (synthetic): stop found, causal, no false detection with the test window | Proposed in ADR-0003; no real-data evidence |
 | Lever-arm term (section 7.2) | - | Not implemented |
-| Filter with constraints on data | - | Not run |
+| Filter with constraints | `nkf/baselines/eskf.py`, `tests/fast/test_eskf.py` | Synthetic only; not run on real data |
 
 ## 10. Open items
 
