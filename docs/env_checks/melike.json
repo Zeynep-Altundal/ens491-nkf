@@ -1,13 +1,13 @@
 {
   "machine": "melike",
-  "checked_utc": "2026-11-12T08:13:55Z",
+  "checked_utc": "2026-11-13T07:53:44Z",
   "os": "Ubuntu 24.04.5 LTS",
   "kernel": "5.15.167.4-microsoft-standard-WSL2",
   "python": "3.11.18",
-  "ram_gb": 16.6,
+  "ram_gb": 25.2,
   "conda_env": "nkf",
-  "git_sha": "32eadaa4c5e3b4938eda78351366cae708d3c338",
-  "git_dirty": true,
+  "git_sha": "a343fc7e874d14fa383d3d78a4969996c442e28a",
+  "git_dirty": false,
   "packages": {
     "numpy": "2.4.6",
     "scipy": "1.17.1",
@@ -28,7 +28,7 @@
     "gpu_vram_gb": 8.6,
     "matmul_device": "cuda",
     "matmul_finite": true,
-    "matmul_ms": 766.6
+    "matmul_ms": 1458.57
   },
   "status": "pass"
 }
